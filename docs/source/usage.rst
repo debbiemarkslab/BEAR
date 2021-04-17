@@ -2,15 +2,9 @@
 Usage
 #####
 
-This package is includes the tools necessary to implement an autoregressive (AR), or Bayesian embedded autoregressive (BEAR) model as decribed in (TODO). The model is implemented in Tensorflow.
-* ``bear_model`` has the tools necessary to implement any BEAR model.
-* ``models`` includes example implementations.
+``bear_model`` is includes the tools necessary to implement an autoregressive (AR), or Bayesian embedded autoregressive (BEAR) model as decribed in (TODO). The model is implemented in Tensorflow.
 
-############
-Installation
-############
-
-To install this package, simply run ``pip install bear-model``.
+To run examples, clone the repository at ``https://github.com/AlanNawzadAmin/BEAR``.
 
 To test your installation, simply run ``pytest`` in the BEAR directory. All tests should pass.
 
