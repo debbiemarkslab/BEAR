@@ -2,7 +2,7 @@
 BEAR
 ====
 
-.. image:: https://img.shields.io/travis/AlanNawzadAmin/BEAR.svg
+.. image:: https://travis-ci.com/AlanNawzadAmin/BEAR.svg?branch=master
         :target: https://travis-ci.com/AlanNawzadAmin/BEAR
 
 .. image:: https://img.shields.io/pypi/v/BEAR.svg
