@@ -100,7 +100,8 @@ def _bear_kmer_counts(kmer_seqs, kmer_total_counts, ref_counts,
         condition_trans_counts = tf.constant(0., dtype)
     if h is None or ar_func is None:
         h = tf.constant(1., dtype)
-        ar_func = lambda x, y: tf.constant(0., dtype)
+        def ar_func(x, y):
+            return tf.constant(0., dtype)
     concentrations = ar_func(kmer_seqs, ref_counts) / h + condition_trans_counts + epsilon
     x = core.tfpDirichletMultinomialPerm(kmer_total_counts, concentrations, name='x')
     return x
