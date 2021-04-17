@@ -119,6 +119,7 @@ def make_ar_func_stop(lag, alphabet_size, dtype=tf.float64):
     stop = np.zeros(alphabet_size+1)
     stop[-1] = 1
     stop = tf.convert_to_tensor(stop, dtype=dtype)
+
     def ar_func(y):
         return stop
     return ar_func, []
