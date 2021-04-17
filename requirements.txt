@@ -1,0 +1,10 @@
+# List required packages in this file, one per line.
+numpy
+scipy
+dill
+datetime
+argparse
+configparser
+tensorflow
+tensorflow_probability
+tensorflow-io-nightly==0.15.0.dev20201020163742
