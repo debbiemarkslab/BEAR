@@ -18,7 +18,7 @@ To test your installation, simply run ``pytest`` in the BEAR directory. All test
 Preprocessing sequence data
 ###########################
 
-TODO
+Process raw sequences into de Bruijn graphs using KMC, including start and end symbols. Coming soon.
 
 ##########
 BEAR model
