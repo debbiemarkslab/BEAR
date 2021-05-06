@@ -80,3 +80,6 @@ target/
 
 #Ipython Notebook
 .ipynb_checkpoints
+
+# Output files
+bear_model/models/out_data

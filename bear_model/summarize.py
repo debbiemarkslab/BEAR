@@ -17,8 +17,6 @@ import random
 import subprocess
 from typing import Any
 
-import pdb
-
 
 # --- Stage 1: Extract prefixes and suffixes from input files. ---
 
@@ -463,11 +461,6 @@ def stage3(unit2is, total_size, n_groups, args):
     # Process prefixes.
     PreConsolidate(unit2is, n_groups, n_bin_bits, args)()
 
-    # ***
-    # Consolidate(unit2is, n_groups, n_bin_bits, 1, args)()  # args.l
-    # return 2**n_bin_bits
-    # ***
-
     # (Multi)process files.
     jobs = []
     for li in range(args.l):
@@ -521,13 +514,13 @@ def main(args):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(
-            description="Preprocess for collapsed EAR training.")
+            description="Preprocess for collapsed BEAR training.")
     parser.add_argument('file',
                         help=('Input file. csv of individual files and their'
                               + ' group number.'))
     parser.add_argument('out_prefix', help='Prefix for output files.')
     parser.add_argument('-l', default=10, type=int,
-                        help='Maximum lag of EAR model.')
+                        help='Maximum lag of BEAR model.')
     parser.add_argument('-mk', default=12, type=int,
                         help='Maximum memory available to KMC (Gb)')
     parser.add_argument('-mf', default=0.1, type=float,
