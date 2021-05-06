@@ -45,6 +45,9 @@ nosetests.xml
 coverage.xml
 *,cover
 .hypothesis/
+bear_model/tests/exdata/out/
+bear_model/tests/exdata/tmp/
+out_data/
 
 # Translations
 *.mo

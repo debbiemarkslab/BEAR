@@ -6,6 +6,7 @@ datetime
 argparse
 configparser
 biopython
+pytest
 tensorflow
 tensorflow_probability==0.11.1
 tensorflow-io-nightly>=0.15.0.dev20201020163742

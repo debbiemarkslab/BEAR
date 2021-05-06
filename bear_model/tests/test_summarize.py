@@ -6,6 +6,7 @@ import csv
 import json
 import numpy as np
 import os
+import pytest
 
 
 def setup_args():
@@ -32,24 +33,25 @@ def setup_args():
             self.num = num
 
     max_lag = 10
-    in_file_set = 'test/infiles.csv'
-    out_prefix = 'test/out'
+    in_file_set = 'bear_model/tests/exdata/infiles.csv'
+    out_prefix = 'bear_model/tests/exdata/out/out'
     args = Args(in_file_set, out_prefix, l=max_lag, mk=1,
-                mf=0.000002, p='test/bin/', r=True, t='tmp/')
+                mf=0.000002, p='', r=True, t='bear_model/tests/exdata/tmp/')
     return args, max_lag, in_file_set, out_prefix
 
 
 def test_main():
     np.random.seed(1)
     # --- Set up input. ---
-    in_file_set = 'test/infiles.csv'
+    in_file_set = 'bear_model/tests/exdata/infiles.csv'
     n_in_files = 5
     n_seqs_per_file = [3, 2, 2, 4, 2]
     groups = [0, 0, 2, 1, 1]
     file_types = ['fa', 'fq', 'fq', 'fa', 'fq']
     len_seqs = (14, 18)
-    in_file_names = [os.path.join('test', 'infile_{}.{}'.format(
-                        j, file_types[j])) for j in range(n_in_files)]
+    in_file_names = [os.path.join('bear_model/tests/exdata',
+                                  'infile_{}.{}'.format(j, file_types[j]))
+                     for j in range(n_in_files)]
     name_alphabet = 'abcdefghijklmnopqrstuvwxyz'
     nmi = 0
     seqs = [['' for si in range(n_seqs_per_file[fi])]
