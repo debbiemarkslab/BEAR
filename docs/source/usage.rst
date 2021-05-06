@@ -72,7 +72,7 @@ These scripts may be used to train on preprocessed transition count data in one 
 They each may be used from the command line and accept a .cfg file specifying the training and testing paramers.
 
 Example config files are located in the config_files folder in the bear/models folder.
-These each contain descriptions of an example dataset made from sequence data taken from the NCBI sequence read archive with id ERR956946;
+These each contain descriptions of an example dataset made from whole genome sequencing data of the Salmonella phage YSD1 (NCBI SRA `link <https://www.ncbi.nlm.nih.gov/sra/?term=ERR956946>`);
 this data was split into training and testing 3:1 and an assembly decribed in `doi:10.1111/mmi.14396 <https://doi.org/10.1111/mmi.14396>`_ was included in the counts data.
 This sequence data was preprocessed into a transition counts matrix for 5-mers which may be seen in models/data/shuffled_virus_kmers_lag_5.tsv.
 All 6 config files decribe the same training regimen and differ only in the AR functions they use through the ar_func_name variable under [model] - linear, cnn, or stop - and whether they decribe training an AR or BEAR model through the train_ar variable under [train].
@@ -127,5 +127,3 @@ A few things to note:
   150 is the read length so that 1/151 transitions are stops.
 * AR models trained using empirical Bayes (train_ar=1) perform better as BEAR models than those trained using maximum likelihood (train_ar=0) (not shown in table).
   The same is true for AR models trained using maximal likelihood evaluated as AR models.
-
-
