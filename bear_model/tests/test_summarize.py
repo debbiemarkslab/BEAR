@@ -135,9 +135,6 @@ def test_main():
             assert lag_kmer in kmer_counts_check[li]
             for gi in range(n_groups):
                 for j in range(len(alphabet)):
-                    # print(li, lag_kmer, gi, j)
-                    # print(kmer_counts[li][lag_kmer][gi][j])
-                    # print(kmer_counts_check[li][lag_kmer][gi][j])
                     assert (kmer_counts[li][lag_kmer][gi][j] ==
                             kmer_counts_check[li][lag_kmer][gi][j])
         # Reverse.
@@ -148,9 +145,6 @@ def test_main():
             assert lag_kmer in kmer_counts_check_rev[li]
             for gi in range(n_groups):
                 for j in range(len(alphabet)):
-                    # print(li, lag_kmer, gi, j)
-                    # print(kmer_counts[li][lag_kmer][gi][j])
-                    # print(kmer_counts_check[li][lag_kmer][gi][j])
                     assert (kmer_counts_rev[li][lag_kmer][gi][j] ==
                             kmer_counts_check_rev[li][lag_kmer][gi][j])
 

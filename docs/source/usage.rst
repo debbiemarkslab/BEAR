@@ -2,17 +2,52 @@
 Usage
 #####
 
-``bear_model`` is includes the tools necessary to implement an autoregressive (AR), or Bayesian embedded autoregressive (BEAR) model as decribed in (TODO). The model is implemented in Tensorflow.
+``bear_model`` provides tools for implementing Bayesian embedded autoregressive (BEAR) models, proposed in Amin et al. (TODO), in TensorFlow.
 
-To run examples, clone the repository at ``https://github.com/AlanNawzadAmin/BEAR``.
+To run the example BEAR models, clone the repository ``https://github.com/AlanNawzadAmin/BEAR`` and follow the directions in the Examples section below.
 
-To test your installation, simply run ``pytest`` in the BEAR directory. All tests should pass.
+To test your installation, run ``pytest`` in the BEAR directory. All tests should pass.
 
 ###########################
 Preprocessing sequence data
 ###########################
 
-Process raw sequences into de Bruijn graphs using KMC, including start and end symbols. Coming soon.
+The first step to training BEAR models is to construct the kmer count matrix
+for each lag L (from one up to some truncation level). The `summarize.py`
+script accomplishes this at large scale and in parallel across CPUs using the
+KMC package and python's multiprocessing module. Usage:
+
+`python summarize.py file out_prefix [-l L] [-mk MK] [-mf MF] [-p P] [-t T]`
+
+`file`: The input csv file with rows in the format
+`FILE, GROUP, TYPE`
+where `FILE` is a path, `GROUP` is an integer, and `TYPE` is either fa
+(denoting fasta) or fq (denoting fastq). Files with the same group will have
+their counts merged.
+
+`out_prefix`: The path and file name prefix for the output files.
+The output files will be in the format
+`out_prefix_lag_1_0.tsv`, ..., `out_prefix_lag_1_N.tsv`, ...,
+`out_prefix_lag_L_0.tsv`, ..., `out_prefix_lag_L_N.tsv`
+where L is the maximum lag and there are N total files for each lag.
+Each file is a tsv with rows of the format
+`kmer\t[[transition counts in group 0 files],[transition counts in group 1 files],...]`
+The symbol `[` in the kmer is the start symbol.
+Each counts vector is in the format `A, C, G, T, stop symbol`.
+
+`L`: The maximum lag (the truncation level).
+
+`MK`: Maximum amount of memory available, in gigabytes (corresponding to the KMC -m flag).
+
+`MF`: Maximum size of output files, in gigabytes.
+
+`P`: Path to KMC binaries. If these binaries are in your PATH, there is no need to
+use this option.
+
+`T`: Folder in which to store KMC's intermediate results. A valid path must be provided.
+
+(Warning: KMC discards kmers with more than 4 billion counts, which may lead
+to errors on ultra large scale datasets.)
 
 ##########
 BEAR model
@@ -20,9 +55,15 @@ BEAR model
 ********
 bear_net
 ********
-The ``bear_net`` submodule contains functions to train, evaluate, and deploy AR or BEAR models with autoregressive functions that can efficiently calculate transition probabilities from a one hot encoding of a kmer.
-Two such autoregressive functions are implemented in the submodule ``ar_funcs``: a linear function and a simple convolutional neural network (CNN), :func:`bear_model.ar_funcs.make_ar_func_linear` and :func:`bear_model.ar_funcs.make_ar_func_cnn` respectively.
-A typical workflow for training a BEAR model might include first loading a file of preprocessed kmer transition counts using the ``dataloader`` submodule:
+The ``bear_net`` submodule contains functions to train, evaluate, and deploy
+BEAR (and AR) models.
+Two example autoregressive functions are implemented in the submodule ``ar_funcs``:
+a linear function and a simple convolutional neural network (CNN),
+:func:`bear_model.ar_funcs.make_ar_func_linear` and
+:func:`bear_model.ar_funcs.make_ar_func_cnn` respectively.
+
+The standard workflow for training a BEAR model is to first load a
+file of preprocessed kmer transition counts using the ``dataloader`` submodule:
 
 .. autofunction:: bear_model.dataloader.dataloader
 
@@ -30,22 +71,30 @@ The loaded datafile may then be used to train an AR of BEAR model using the ``be
 
 .. autofunction:: bear_model.bear_net.train
 
-One may then wish to evaluate the performance of the trained model:
+To evaluate the performance of the trained model, use:
 
 .. autofunction:: bear_model.bear_net.evaluation
 
-To save a model, one may use the python module ``dill`` to save the vector of parameters. To recover h and the autoregressive function from the list of parameters alone, one may use the ``change_scope_params`` function:
+To save a model and its learned parameters, use the python module ``dill``.
+To recover the misspecification diagnostic h and the autoregressive function
+from the list of saved parameters, use the ``change_scope_params`` function:
 
 .. autofunction:: bear_model.bear_net.change_scope_params
 
-Other autoregressive functions may be implemented by creating a ``make_ar_func_...`` function templated from the examples :func:`bear_model.ar_funcs.make_ar_func_linear` and :func:`bear_model.ar_funcs.make_ar_func_cnn`.
+Other autoregressive functions may be implemented by creating a
+``make_ar_func_...`` function based on the examples
+:func:`bear_model.ar_funcs.make_ar_func_linear` and
+:func:`bear_model.ar_funcs.make_ar_func_cnn`.
 
 **************
 bear_ref
 **************
 
 One may also build an autoregressive function from a reference sequence:
-A Jukes-Cantor mutation model (with error rate :math:`\tau`) from a reference sequence is first used to create an AR function, :math:`\tilde f`, on those transitions that are not to :math:`\$`, the stop symbol, using the transition counts in the reference :math:`c_{\text{ref}}`:
+A Jukes-Cantor mutation model (with error rate :math:`\tau`) from a reference
+sequence is first used to create an AR function, :math:`\tilde f`, on those
+transitions that are not to :math:`\$`, the stop symbol, using the transition
+counts in the reference :math:`c_{\text{ref}}`:
 
 .. math::
     \tilde{f}(b; k) = e^{-\tau}\frac{c_{\text{ref}, b, k}}{\sum_{b'\neq\$}c_{\text{ref}, b', k}}+\left(1-e^{-\tau}\right)\frac{1}{\#\{b'\neq\$\}}

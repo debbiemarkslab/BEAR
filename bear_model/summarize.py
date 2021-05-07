@@ -1,5 +1,6 @@
 """
-Preprocessing multiple large nt datasets for BEAR model training.
+Extract summary statistics from large nucleotide datasets for BEAR model
+training.
 """
 
 import argparse
@@ -199,10 +200,6 @@ class Unit2i:
         out_kmc = subprocess.run(kmc_call, shell=True, capture_output=True)
         stdout_kmc = out_kmc.stdout.decode("utf-8")
         stderr_kmc = out_kmc.stderr.decode("utf-8")
-
-        # TODO: Parse warning files for errors. For large datasets,
-        # make sure 'No. of k-mers above max. threshold : 0'
-        # (max threshold is 4,294,967,295).
 
         # Run kmc sort and dump.
         kmc_dump_call = '{} transform {} sort {} dump {}'.format(
@@ -516,7 +513,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(
             description="Preprocess for collapsed BEAR training.")
     parser.add_argument('file',
-                        help=('Input file. csv of individual files and their'
+                        help=('Input file: csv of individual files and their'
                               + ' group number.'))
     parser.add_argument('out_prefix', help='Prefix for output files.')
     parser.add_argument('-l', default=10, type=int,
@@ -525,13 +522,13 @@ if __name__ == '__main__':
                         help='Maximum memory available to KMC (Gb)')
     parser.add_argument('-mf', default=0.1, type=float,
                         help='Maximum memory of final dataset chunks (Gb).')
-    parser.add_argument('-p', default='.',
+    parser.add_argument('-p', default='',
                         help=('Path to folder with kmc scripts' +
-                              '(kmc and kmc_dump).'))
+                              ' (kmc and kmc_dump).'))
     parser.add_argument('-r', action='store_true', default=False,
                         help='Compute reverse direction also.')
-    parser.add_argument('-t', default='tmp',
-                        help='Temporary directory for KMC.')
+    parser.add_argument('-t', default='tests/exdata/tmp/',
+                        help='Temporary directory for use by KMC.')
     parser.add_argument('-s12', action='store_true', default=False,
                         help='Only run stages 1 and 2.')
     parser.add_argument('-s3', action='store_true', default=False,
