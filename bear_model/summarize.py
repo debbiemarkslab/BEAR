@@ -528,7 +528,8 @@ if __name__ == '__main__':
     parser.add_argument('-r', action='store_true', default=False,
                         help='Compute reverse direction also.')
     parser.add_argument('-t', default='tests/exdata/tmp/',
-                        help='Temporary directory for use by KMC.')
+                        help=('Temporary directory for use by KMC. '
+                              + 'Defaults to tests/exdata/tmp/'))
     parser.add_argument('-s12', action='store_true', default=False,
                         help='Only run stages 1 and 2.')
     parser.add_argument('-s3', action='store_true', default=False,

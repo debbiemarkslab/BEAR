@@ -2,11 +2,13 @@
 Usage
 #####
 
-``bear_model`` provides tools for implementing Bayesian embedded autoregressive (BEAR) models, proposed in Amin et al. (TODO), in TensorFlow.
+``bear_model`` provides tools for working with Bayesian embedded autoregressive
+(BEAR) models, proposed in Amin et al. (link TODO). Preprocessing is done using KMC
+and models are trained via empirical Bayes in TensorFlow.
 
-To run the example BEAR models, clone the repository ``https://github.com/AlanNawzadAmin/BEAR`` and follow the directions in the Examples section below.
+To run the example models below, you will need to clone the `package repository`_.
 
-To test your installation, run ``pytest`` in the BEAR directory. All tests should pass.
+.. _package repository: https://github.com/AlanNawzadAmin/BEAR
 
 ###########################
 Preprocessing sequence data
@@ -44,8 +46,9 @@ Each counts vector is in the format `A, C, G, T, stop symbol`.
 `P`: Path to KMC binaries. If these binaries are in your PATH, there is no need to
 use this option.
 
-`T`: Folder in which to store KMC's intermediate results. A valid path must be provided.
+`T`: Folder in which to store KMC's intermediate results. A valid path MUST be provided.
 
+You can also run `python summarize.py -h` for help.
 (Warning: KMC discards kmers with more than 4 billion counts, which may lead
 to errors on ultra large scale datasets.)
 
@@ -116,6 +119,9 @@ The submodule ``bear_ref`` allows one to train models of this type using
 ########
 Examples
 ########
+
+``python summarize.py -l 5 -mk 18 -mf 5``
+
 The scripts ``bear/models/train_bear_net.py`` and ``bear/models/train_bear_reference.py`` implement the above workflows for ``bear_net`` and ``bear_ref`` respectively.
 These scripts may be used to train on preprocessed transition count data in one or multiple files.
 They each may be used from the command line and accept a .cfg file specifying the training and testing paramers.
