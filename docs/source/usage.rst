@@ -87,7 +87,41 @@ The submodule ``bear_ref`` allows one to train models of this type using
 Example BEAR models
 ###################
 
-``python summarize.py -l 5 -mk 18 -mf 5``
+########
+Tutorial
+########
+
+**Part 1: preprocessing**
+
+First, download the example dataset and unzip.
+
+``wget https://marks.hms.harvard.edu/bear/ysd1_example.tar.gz``
+
+``tar -xvf ysd1_example.tar.gz``
+
+We will assume that the data is in the ``bear_model`` folder, but it can be
+moved to a different folder if the paths in the ``datalist.csv`` file
+are appropriately edited. There are also five other files, corresponding to
+training sequence data (`1_train.fasta` and `2_train.fasta`),
+testing data (`1_test.fasta` and `2_test.fasta`), and the genome reference
+assembly (`virus_reference.fna`).
+
+Next we extract summary statistics from the datasets, for lags up to 5 (inclusive).
+
+``python summarize.py data/datalist.csv data/ysd1 -l 5``
+
+The kmer base counts will be found in files ().
+
+Finally, before training a BEAR model, datasets should be shuffled. In Linux,
+
+``shuf data/ysd1_lag_5_file_0.tsv -o data/ysd1_6_lag_5_file_0_shuf.tsv``
+
+On a Mac, replace ``shuf`` with ``gshuf`` (you may first need to install
+GNU coreutils, e.g. ``brew install coreutils``).
+A preshuffled version is provided in the file () to ensure this tutorial is
+reproducible.
+
+**Part 2: training**
 
 The scripts ``bear/models/train_bear_net.py`` and ``bear/models/train_bear_reference.py`` implement the above workflows for ``bear_net`` and ``bear_ref`` respectively.
 These scripts may be used to train on preprocessed transition count data in one or multiple files.
