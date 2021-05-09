@@ -2,11 +2,13 @@
 Usage
 #####
 
-``bear_model`` provides tools for working with Bayesian embedded autoregressive
-(BEAR) models, proposed in Amin et al. (link TODO). Preprocessing is done using KMC
-and models are trained via empirical Bayes in TensorFlow.
-
-To run the example models below, you will need to clone the `package repository`_.
+This is a library for building Bayesian embedded autoregressive (BEAR) models,
+proposed in Amin et al. (link TODO). It provides (1) a script for extracting
+summary statistics from large sequence datasets (which relies on KMC),
+(2) a python package with tools for building BEAR models in general
+(which relies on TensorFlow), and (3) scripts for training and evaluating
+specific example BEAR models. To use the package, follow the installation
+instructions and clone the `package repository`_.
 
 .. _package repository: https://github.com/AlanNawzadAmin/BEAR
 
@@ -14,47 +16,12 @@ To run the example models below, you will need to clone the `package repository`
 Preprocessing sequence data
 ###########################
 
-The first step to training BEAR models is to construct the kmer count matrix
-for each lag L (from one up to some truncation level). The `summarize.py`
-script accomplishes this at large scale and in parallel across CPUs using the
-KMC package and python's multiprocessing module. Usage:
+.. automodule:: bear_model.summarize
 
-`python summarize.py file out_prefix [-l L] [-mk MK] [-mf MF] [-p P] [-t T]`
 
-`file`: The input csv file with rows in the format
-`FILE, GROUP, TYPE`
-where `FILE` is a path, `GROUP` is an integer, and `TYPE` is either fa
-(denoting fasta) or fq (denoting fastq). Files with the same group will have
-their counts merged.
-
-`out_prefix`: The path and file name prefix for the output files.
-The output files will be in the format
-`out_prefix_lag_1_0.tsv`, ..., `out_prefix_lag_1_N.tsv`, ...,
-`out_prefix_lag_L_0.tsv`, ..., `out_prefix_lag_L_N.tsv`
-where L is the maximum lag and there are N total files for each lag.
-Each file is a tsv with rows of the format
-`kmer\t[[transition counts in group 0 files],[transition counts in group 1 files],...]`
-The symbol `[` in the kmer is the start symbol.
-Each counts vector is in the format `A, C, G, T, stop symbol`.
-
-`L`: The maximum lag (the truncation level).
-
-`MK`: Maximum amount of memory available, in gigabytes (corresponding to the KMC -m flag).
-
-`MF`: Maximum size of output files, in gigabytes.
-
-`P`: Path to KMC binaries. If these binaries are in your PATH, there is no need to
-use this option.
-
-`T`: Folder in which to store KMC's intermediate results. A valid path MUST be provided.
-
-You can also run `python summarize.py -h` for help.
-(Warning: KMC discards kmers with more than 4 billion counts, which may lead
-to errors on ultra large scale datasets.)
-
-##########
-BEAR model
-##########
+####################
+Building BEAR models
+####################
 ********
 bear_net
 ********
@@ -116,9 +83,9 @@ The submodule ``bear_ref`` allows one to train models of this type using
 
 :func:`bear_model.bear_ref.evaluate` and :func:`bear_model.bear_net.change_scope_params` amy be used in analogy with their coresponding functions in ``bear_net``.
 
-########
-Examples
-########
+###################
+Example BEAR models
+###################
 
 ``python summarize.py -l 5 -mk 18 -mf 5``
 

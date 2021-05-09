@@ -2,10 +2,9 @@
 Installation
 ============
 
-To install the BEAR model python package, use a Python 3 environment and run::
+To install the python package, use a Python 3 environment and run::
 
     $ pip install bear-model
-
 
 Preprocessing fasta and fastq files requires installation of `KMC`_.
 This code has been tested on KMC version 3.1.1. Mac users should run

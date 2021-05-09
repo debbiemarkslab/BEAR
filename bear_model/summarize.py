@@ -1,6 +1,57 @@
 """
-Extract summary statistics from large nucleotide datasets for BEAR model
-training.
+Extract summary statistics (kmer count transitions) from large nucleotide
+datasets in order to train BEAR models:
+
+``python summarize.py file out_prefix [-l L] [-mk MK] [-mf MF] [-p P] [-t T]``
+
+**Input:**
+
+:file: The input csv file with rows in the format `FILE, GROUP, TYPE`
+    where `FILE` is a path, `GROUP` is an integer, and `TYPE` is either `fa`
+    (denoting fasta) or `fq` (denoting fastq). Files with the same group will
+    have their counts merged. All files must contain DNA sequences
+    (A, C, G, and T alone).
+
+:out_prefix: The path and file name prefix for the output files.
+
+:-l: The maximum lag (the truncation level).
+
+:-mk: Maximum amount of memory available, in gigabytes (corresponding to the
+    KMC -m flag).
+
+:-mf: Maximum size of output files, in gigabytes.
+
+:-p: Path to KMC binaries. If these binaries are in your PATH, there is no
+    need to use this option.
+
+:-t: Folder in which to store KMC's intermediate results. A valid path MUST be
+    provided.
+
+You can also run ``python summarize.py -h`` for help and more advanced options.
+
+**Output:**
+
+A collection of files::
+
+    out_prefix_lag_1_0.tsv, ..., out_prefix_lag_1_N.tsv, ...,
+    out_prefix_lag_L_0.tsv, ..., out_prefix_lag_L_N.tsv
+
+where L is the maximum lag and there are N total files for each lag.
+Each file is a tsv with rows of the format::
+
+    kmer\t[[transition counts in group 0 files],[transition counts in group 1 files],...]
+
+The symbol `[` in the kmer is the start symbol.
+Each counts vector is in the order `A, C, G, T, stop symbol`.
+
+.. caution:: KMC discards kmers with more than 4 billion counts, which may lead
+    to errors on ultra large scale datasets.
+
+.. caution:: The script is not intended for use on sequence data with N symbols;
+    it will run but will not handle such missing data carefully.
+
+.. caution:: The output is not lexicographically sorted, nor uniformly randomized.
+
 """
 
 import argparse
@@ -164,7 +215,7 @@ def stage1(args):
 
 # --- Stage 2: Count kmers with KMC. ---
 class Unit2i:
-
+    """Run KMC on a collection of input files."""
     def __init__(self, file_type, group, seq_type, k, in_files, args):
 
         self.group = group
@@ -235,6 +286,7 @@ class Unit2i:
 
 
 def stage2(unit2is, args):
+    """Run KMC on all files."""
     # Run sequentially.
     out_size = 0
     for unit2i in unit2is:
@@ -249,7 +301,7 @@ alphabet = {'A': 0, 'C': 1, 'G': 2, 'T': 3, ']': 4}
 
 
 class Register:
-
+    """Merge counts with the same lag sequence."""
     def __init__(self, n_groups, n_bins_bits, lag, seq_type, args,
                  writers=None):
 
@@ -315,6 +367,7 @@ class Register:
 
 
 class PreConsolidate:
+    """Consolidate prefix kmer counting results."""
     def __init__(self, unit2is, n_groups, n_bin_bits, args):
 
         # Initialize queues.
@@ -367,6 +420,7 @@ class PreConsolidate:
 
 
 class Consolidate:
+    """Consolidate kmer counting results."""
     def __init__(self, unit2is, n_groups, n_bin_bits, lag, args):
 
         # Initialize queues.
@@ -431,6 +485,7 @@ class Consolidate:
 
 @dataclass(order=True)
 class Unit3i:
+    """Individual kmer + count."""
     priority: str
     item: Any = field(compare=False)
 
@@ -447,11 +502,15 @@ class Unit3i:
 
 
 def compute_n_bin_bits(total_size, n_groups, mf):
+    """Compute number of output files per lag and bits needed to specify
+    them."""
     return max([math.ceil(math.log(total_size * n_groups /
                                    (mf * 1e9)) / math.log(2)), 0])
 
 
 def stage3(unit2is, total_size, n_groups, args):
+    """Merge KMC output kmer counts to produce kmer-transition counts for all
+    lags."""
     # Initialize registers and writers.
     n_bin_bits = compute_n_bin_bits(total_size, n_groups, args.mf)
 
@@ -475,6 +534,7 @@ def stage3(unit2is, total_size, n_groups, args):
 
 # --- Main. ---
 def run(args):
+    """Run entire summarization."""
     # Preprocess before KMC.
     print('Start: Stage 1...', datetime.datetime.now())
     n_groups, unit2is = stage1(args)
