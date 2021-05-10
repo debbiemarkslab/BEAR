@@ -164,52 +164,61 @@ In Linux,
 On a Mac, replace ``shuf`` with ``gshuf`` (you may first need to install
 GNU coreutils, via e.g. ``brew install coreutils``).
 A preshuffled version is provided in the file
-``models/data/shuffled_virus_kmers_lag_5.tsv``
+``models/data/ysd1_lag_5_file_0_preshuf.tsv``
 to ensure this tutorial is reproducible.
 
 **Part 2: training**
 
+Now we can train the hyperparameters of the BEAR model via empirical Bayes.
+Config files for training three different AR models and their corresponding
+BEAR model can be found in the folder ``models/config_files``.
+You can run these examples on your own shuffled dataset by editing the config files to set
+``start_token = ysd1_lag_5_file_0_shuf.tsv``; by default the config files use the
+example preshuffled file.
+Note that in these examples we fix the model lag at the small value of 5 so
+that it can be trained quickly; normally we would choose the lag based on maximum
+marginal likelihood.
+All 6 config files use the same training protocol and differ only in
+the AR functions they use (see config file section ``[model]``)
+and whether they are BEAR or AR models (see config file entry ``train_ar``).
+To run the examples,
 
-Example config files are located in the config_files folder in the bear/models
-folder.
-All 6 config files decribe the same training regimen and differ only in
-the AR functions they use through the ar_func_name variable under
-[model] - linear, cnn, or stop - and whether they decribe training an AR or BEAR
-model through the train_ar variable under [train].
-The examples may be run by navigating to the bear/models directory and then
-using the command line to run one of
+**Linear AR** ``python models/train_bear_net.py models/config_files/bear_lin_ar.cfg``
 
-``python train_bear_net.py config_files/bear_lin_ar.cfg``
+**CNN AR** ``python models/train_bear_net.py models/config_files/bear_cnn_ar.cfg``
 
-``python train_bear_net.py config_files/bear_lin_bear.cfg``
+**Reference AR** ``python models/train_bear_ref.py models/config_files/bear_stop_ar.cfg``
 
-``python train_bear_net.py config_files/bear_cnn_ar.cfg``
+**Linear BEAR** ``python models/train_bear_net.py models/config_files/bear_lin_bear.cfg``
 
-``python train_bear_net.py config_files/bear_cnn_bear.cfg``
+**CNN BEAR** ``python models/train_bear_net.py models/config_files/bear_cnn_bear.cfg``
 
-``python train_bear_ref.py config_files/bear_stop_ar.cfg``
+**Reference BEAR** ``python models/train_bear_ref.py models/config_files/bear_stop_bear.cfg``
 
-``python train_bear_ref.py config_files/bear_stop_bear.cfg``
+Each example should not take more than a few minutes to run.
+The scripts each output a folder named with the time at which they were run in
+``out_data/logs``. This output folders contains:
 
-These each should not take more than a few minutes to run on any setup.
-These scripts output a folder titled with the time they were run to models/out_data/logs.
-Each of these folders contain:
+* A progress file that can be used to visualize the training curve using
+  TensorBoard.
+* A config file that consists of the input config file appended with the
+  training results, in the section ``[results]``.
+  (Note that even when the BEAR model is the model that is trained, the
+  perplexity, log likelihood and accuracy of the embedded AR model
+  and vanilla BEAR model (BMM) are also reported; when the AR model is trained,
+  the performance of the corresponding BEAR model is reported.)
+* A pickle file with the learned hyperparameters. These hyperparameters can be
+  recovered using the ``dill`` package.
 
-* A pickle file with the trained parameters. They may be recoveded using ``dill``.
-* A progress file that may be used to visualize the training curve using tensorboard.
-* A config file containing the parameters of the run as well as the performance of the model and :math:`h`.
-  The output of ``models/train_bear_reference.py`` also include learned error and stop rates derived from :math:`\tau` and :math:`\nu` as defined above.
-  Note the evaluations of the trained AR function and h as parameters of both a BEAR and AR model will be included regardless of the value of train_ar, as well as the performance of a vanilla Bayesian Markov model (BMM).
-
-One may compare the results of their runs to the following table:
+The performance results from these example models should match the following table:
 
 ==============  ==========  ======== ======
 Experiment      Perplexity  Accuracy h
 ==============  ==========  ======== ======
-Linear AR       3.99        32.9%    -
-CNN AR          3.85        35.6%    -
-Reference AR    3.84        36.5%    -
-BMM             3.79        36.8%    -
+Linear AR       3.99        32.9%    N/A
+CNN AR          3.85        35.6%    N/A
+Reference AR    3.84        36.5%    N/A
+BMM             3.79        36.8%    N/A
 Linear BEAR     3.79        36.8%    0.0433
 CNN BEAR        3.79        36.8%    0.0116
 Reference BEAR  3.79        36.8%    0.0142
@@ -217,14 +226,30 @@ Reference BEAR  3.79        36.8%    0.0142
 
 A few things to note:
 
-* In comparison with the values reported in the publication for a lag of 13, the perplexities are much larger and the learned :math:`h`'s are much smaller.
-  This is due to the fact that the closest (in KL) AR model of lag 5, expectedly, has a much larger perplexity than the best fit of lag 13, and is also much closer to those module specified by linear and CNN models.
-* As demonstrated in the publication, with enough data, the relative benefit of the EAR over the AR is minimal. As the lag is only 5 in this example, the data is enough to make this the case.
-  However, the BEAR still outperforms the BMM in the fifth or sixth decimal space (not shown in table).
-* The value of :math:`h` is in proportion to expected misspecification of the parametric AR model.
-  Interestingly, in this simple case, the CNN is better specified than the reference.
-  Running ``python train_bear_ref.py config_files/bear_cnn_bear.cfg`` indeed yields a substantially lower :math:`h` at 0.00422.
-* The learned stop rate outputted with the reference AR model is near 151 (not shown in table).
-  150 is the read length so that 1/151 transitions are stops.
-* AR models trained using empirical Bayes (train_ar=1) perform better as BEAR models than those trained using maximum likelihood (train_ar=0) (not shown in table).
-  The same is true for AR models trained using maximal likelihood evaluated as AR models.
+* The publication used a lag of 13, chosen by maximum marginal likelihood.
+  Here, using a lag of 5, the perplexities are much larger and the
+  :math:`h` values are much smaller.
+  This is due to the fact that the closest (in KL) AR model of lag 5,
+  unsurprisingly, has a much larger perplexity than the lag 13 model, and
+  is also much closer to the linear and CNN models.
+* As demonstrated in the publication, with enough data, the relative benefit of
+  the BEAR over the vanilla BEAR is minimal. Since the lag is only 5 in this example, the
+  data is sufficiently large (relative to the model flexibility)
+  to make this true. However, the BEAR still outperforms the vanilla BEAR in
+  the fifth or sixth decimal space (not shown in table).
+* The value of :math:`h` is in proportion to expected misspecification of the
+  parametric AR model.
+  Interestingly in this simple case, unlike most example datasets in the publication,
+  the CNN is better specified than the
+  reference (:math:`h=0.0116` versus :math:`h=0.0142`).
+  Running a reference model with :math:`g` set to a CNN, via
+  ``python train_bear_ref.py config_files/bear_cnn_bear.cfg``,
+  yields an even lower :math:`h=0.00422`, suggesting the two models learn
+  complementary information.
+* The learned stop rate :math:`\nu` in the reference AR model is near 151
+  (not shown in table).
+  150 is the read length, so 1/151 transitions are stops on average.
+* Embedded AR models trained in the context of a BEAR model produce better BEAR
+  models than AR models trained using maximum likelihood (not shown in table).
+  The same is true for AR models trained using maximal likelihood and evaluated
+  as AR models rather than as BEAR models.
