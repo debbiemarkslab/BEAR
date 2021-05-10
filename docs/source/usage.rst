@@ -156,26 +156,19 @@ The counts for each lag will be found in the files `data/ysd1_lag_1_file_0.tsv`,
 `data/ysd1_lag_2_file_0.tsv`, `data/ysd1_lag_3_file_0.tsv`,
 `data/ysd1_lag_4_file_0.tsv`, and `data/ysd1_lag_5_file_0.tsv`. Each line
 consists of an individual kmer and the transition counts in each data group.
-Finally, before training a BEAR model, datasets should be shuffled so that
-kmers are sampled randomly. In Linux,
+Finally, before training a non-vanilla BEAR model, datasets should be shuffled.
+In Linux,
 
-``shuf data/ysd1_lag_5_file_0.tsv -o data/ysd1_6_lag_5_file_0_shuf.tsv``
+``shuf data/ysd1_lag_5_file_0.tsv -o data/ysd1_lag_5_file_0_shuf.tsv``
 
 On a Mac, replace ``shuf`` with ``gshuf`` (you may first need to install
-GNU coreutils, e.g. ``brew install coreutils``).
+GNU coreutils, via e.g. ``brew install coreutils``).
 A preshuffled version is provided in the file
 ``models/data/shuffled_virus_kmers_lag_5.tsv``
 to ensure this tutorial is reproducible.
 
 **Part 2: training**
 
-The scripts ``bear/models/train_bear_net.py`` and
-``bear/models/train_bear_reference.py`` implement the above workflows
-for ``bear_net`` and ``bear_ref`` respectively.
-These scripts may be used to train on preprocessed transition count data in
-one or multiple files.
-They each may be used from the command line and accept a .cfg file specifying
-the training and testing parameters.
 
 Example config files are located in the config_files folder in the bear/models
 folder.
