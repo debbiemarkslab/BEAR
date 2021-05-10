@@ -15,6 +15,9 @@ instructions and clone the `package repository`_.
 ###########################
 Preprocessing sequence data
 ###########################
+************
+summarize.py
+************
 
 .. automodule:: bear_model.summarize
 
@@ -91,7 +94,7 @@ To train the model efficiently, we preprocess the reference sequence
 along with the training and testing data, such that
 :math:`\#_{\text{ref}}` forms a column of the summarized data.
 The submodule ``bear_ref`` trains this reference-based
-BEAR model, optimizing the hyperparameters :math:`\tau` and :math:`\nu` as well as 
+BEAR model, optimizing the hyperparameters :math:`\tau` and :math:`\nu` as well as
 any additional parameters in :math:`g`.
 
 .. autofunction:: bear_model.bear_ref.train
@@ -104,6 +107,19 @@ in ``bear_net`` with the same names.
 Example BEAR models
 ###################
 
+************************
+models/train_bear_net.py
+************************
+
+.. automodule:: bear_model.models.train_bear_net
+
+************************
+models/train_bear_ref.py
+************************
+
+.. automodule:: bear_model.models.train_bear_ref
+
+
 ########
 Tutorial
 ########
@@ -112,7 +128,7 @@ In this tutorial, we will apply BEAR models to whole genome
 sequencing data from the Salmonella bacteriophage YSD1. The data and the
 reference assembly are from
 `Dunstan et al. (2019) <https://doi.org/10.1111/mmi.14396>`_; the NCBI SRA
-link is
+record is
 `here <https://www.ncbi.nlm.nih.gov/sra/?term=ERR956946>`_.
 
 **Part 1: preprocessing**

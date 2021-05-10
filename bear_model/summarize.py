@@ -1,6 +1,6 @@
 """
 Extract summary statistics (kmer count transitions) from large nucleotide
-datasets in order to train BEAR models:
+datasets in order to train BEAR models. Usage:
 
 ``python summarize.py file out_prefix [-l L] [-mk MK] [-mf MF] [-p P] [-t T]``
 
