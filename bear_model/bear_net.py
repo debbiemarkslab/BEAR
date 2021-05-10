@@ -320,7 +320,7 @@ def train(data, num_kmers, epochs, ds_loc, alphabet, lag, make_ar_func, af_kwarg
 @tf.function
 def evaluation(data, ds_loc_train, ds_loc_test,
                alphabet, h, ar_func, van_reg, dtype=tf.float64):
-    """Evaluate a trained BEAR, BMM, or AR model.
+    """Evaluate a trained BEAR, AR or vanilla BEAR model.
 
     Parameters
     ----------
@@ -339,20 +339,20 @@ def evaluation(data, ds_loc_train, ds_loc_test,
         of dtype and returns a tensor of shape [A1, ..., An, alphabet_size+1] of dtype
         of transition probabilities for each kmer. The autoregressive function.
     van_reg : float
-        Prior on BMM model.
+        Prior on vanilla BEAR model (Dirichlet concentration parameter).
     dtype : dtype, default = tf.float64
 
     Returns
     -------
     log_likelihood_ear, log_likelihood_arm, log_likelihood_van : float
         Total log likelihood of the data with the model evaluated as a BEAR,
-        AR or BMM model.
+        AR or vanilla BEAR model.
     perplexity_ear, perplexity_arm, perplexity_van : float
         Perplexity of the data with the model evaluated as a BEAR,
-        AR or BMM model.
+        AR or vanilla BEAR model.
     accuracy_ear, accuracy_arm, accuracy_van : float
         Accuracy of the data with the model evaluated as a BEAR,
-        AR or BMM model. Ties in maximum model probability are resolved randomly.
+        AR or vanilla BEAR model. Ties in maximum model probability are resolved randomly.
     """
     alphabet_size = len(core.alphabets_tf[alphabet]) - 1
 

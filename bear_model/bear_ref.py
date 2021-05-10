@@ -153,7 +153,7 @@ def _create_params(lag, alphabet_size, make_ar_func,
     params: list
         List of parameters as tensorflow variables.
     h_signed : dtype
-        log(h) where h is the BEAR parameter.
+        log(h) where h is the BEAR concentration parameter.
     ar_func : function
         The autoregressive function.
     """
@@ -215,9 +215,9 @@ def _train_step(batch, num_kmers, h_signed, ar_func,
         [kmer_batch_size, lag, alphabet_size+1] and the second is the transition
         counts of size [kmer_batch_size, alphabet_size+1].
     num_kmers : int
-        Total number of kmers seen in data. Unsed to normalize estimate of loss.
+        Total number of kmers seen in data. Used to normalize estimate of loss.
     h_signed : dtype
-        log(h) where h is the BEAR parameter.
+        log(h) where h is the BEAR concentration parameter.
     ar_func : function
         A function that takes a tensor of shape [A1, ..., An, lag, alphabet_size+1]
         of dtype and returns a tensor of shape [A1, ..., An, alphabet_size+1] of dtype
@@ -272,9 +272,9 @@ def train(data, num_kmers, epochs, ds_loc, ds_loc_ref, alphabet, lag, make_ar_fu
         Total number of kmers seen in data. Unsed to normalize estimate of loss.
     epochs : int
     ds_loc : int
-        Column in count data that coresponds with the training data.
+        Column in count data that corresponds with the training data.
     ds_loc_ref : int
-        Column in count data that coresponds with the reference data.
+        Column in count data that corresponds with the reference data.
     alphabet : str
         One of 'dna', 'rna', 'prot'.
     lag : int
@@ -299,7 +299,7 @@ def train(data, num_kmers, epochs, ds_loc, ds_loc_ref, alphabet, lag, make_ar_fu
     params: list
         List of parameters as tensorflow variables.
     h_signed : dtype
-        log(h) where h is the BEAR parameter.
+        log(h) where h is the BEAR concentration parameter.
     ar_func : function
         The autoregressive function.
     """
@@ -388,16 +388,16 @@ def train(data, num_kmers, epochs, ds_loc, ds_loc_ref, alphabet, lag, make_ar_fu
 @tf.function
 def evaluation(data, ds_loc_train, ds_loc_test, ds_loc_ref,
                alphabet, h, ar_func, van_reg, dtype=tf.float64):
-    """Evaluate a trained BEAR, BMM, or AR model.
+    """Evaluate a trained BEAR, AR or vanilla BEAR model.
 
     Parameters
     ----------
     data : tensorflow data object
         Load sequence data using tools in dataloader.py. Minibatch before passing.
     ds_loc_train : int
-        Column in count data that coresponds with the training data.
+        Column in count data that corresponds with the training data.
     ds_loc_test : int
-        Column in count data that coresponds with the testing data.
+        Column in count data that corresponds with the testing data.
     alphabet : str
         One of 'dna', 'rna', 'prot'.
     h : dtype
@@ -408,20 +408,20 @@ def evaluation(data, ds_loc_train, ds_loc_test, ds_loc_ref,
         tensor of shape [A1, ..., An, alphabet_size+1] of dtype of transition probabilities
         for each kmer. The autoregressive function.
     van_reg : float
-        Prior on BMM model.
+        Prior on vanilla BEAR model (Dirichlet concentration parameter).
     dtype : dtype, default=tf.float64
 
     Returns
     -------
     log_likelihood_ear, log_likelihood_arm, log_likelihood_van : float
         Total log likelihood of the data with the model evaluated as a BEAR,
-        AR or BMM model.
+        AR or vanilla BEAR model.
     perplexity_ear, perplexity_arm, perplexity_van : float
         Perplexity of the data with the model evaluated as a BEAR,
-        AR or BMM model.
+        AR or vanilla BEAR model.
     accuracy_ear, accuracy_arm, accuracy_van : float
         Accuracy of the data with the model evaluated as a BEAR,
-        AR or BMM model. Ties are resolved randomly.
+        AR or vanilla BEAR model. Ties in maximum model probability are resolved randomly.
     """
     alphabet_size = len(core.alphabets_tf[alphabet]) - 1
 
