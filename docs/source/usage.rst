@@ -93,24 +93,25 @@ Tutorial
 
 **Part 1: preprocessing**
 
-First, download the example dataset and unzip.
+First, download the example dataset and unzip (we assume throughout that you
+are in the ``bear_model`` folder and the data is in the ``data`` subfolder).
 
 ``wget https://marks.hms.harvard.edu/bear/ysd1_example.tar.gz``
 
-``tar -xvf ysd1_example.tar.gz``
+``tar -xvf ysd1_example.tar.gz -C data``
 
-We will assume that the data is in the ``bear_model`` folder, but it can be
-moved to a different folder if the paths in the ``datalist.csv`` file
-are appropriately edited. There are also five other files, corresponding to
+There are six files in the dataset, corresponding to
 training sequence data (`1_train.fasta` and `2_train.fasta`),
-testing data (`1_test.fasta` and `2_test.fasta`), and the genome reference
-assembly (`virus_reference.fna`).
+testing data (`1_test.fasta` and `2_test.fasta`), the genome reference
+assembly (`virus_reference.fna`), and a list of the data (`datalist.csv`).
 
 Next we extract summary statistics from the datasets, for lags up to 5 (inclusive).
 
 ``python summarize.py data/datalist.csv data/ysd1 -l 5``
 
-The kmer base counts will be found in files ().
+The kmer base counts will be found in files `data/ysd1_lag_1_file_0.tsv`,
+`data/ysd1_lag_2_file_0.tsv`, `data/ysd1_lag_3_file_0.tsv`,
+`data/ysd1_lag_4_file_0.tsv`, and `data/ysd1_lag_5_file_0.tsv`.
 
 Finally, before training a BEAR model, datasets should be shuffled. In Linux,
 
@@ -118,8 +119,9 @@ Finally, before training a BEAR model, datasets should be shuffled. In Linux,
 
 On a Mac, replace ``shuf`` with ``gshuf`` (you may first need to install
 GNU coreutils, e.g. ``brew install coreutils``).
-A preshuffled version is provided in the file () to ensure this tutorial is
-reproducible.
+A preshuffled version is provided in the file
+``models/data/shuffled_virus_kmers_lag_5.tsv``
+to ensure this tutorial is reproducible.
 
 **Part 2: training**
 

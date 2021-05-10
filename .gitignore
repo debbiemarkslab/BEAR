@@ -84,5 +84,7 @@ target/
 #Ipython Notebook
 .ipynb_checkpoints
 
-# Output files
+# Output files and data
 bear_model/models/out_data
+bear_model/data
+**.tar.gz**
