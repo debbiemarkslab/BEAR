@@ -91,29 +91,40 @@ Example BEAR models
 Tutorial
 ########
 
+In this tutorial, we will apply BEAR models to whole genome
+sequencing data from the Salmonella bacteriophage YSD1. The data and the
+reference assembly are from
+`Dunstan et al. (2019) <https://doi.org/10.1111/mmi.14396>`_; the NCBI SRA
+link is
+`here <https://www.ncbi.nlm.nih.gov/sra/?term=ERR956946>`_.
+
 **Part 1: preprocessing**
 
-First, download the example dataset and unzip (we assume throughout that you
-are in the ``bear_model`` folder and the data is in the ``data`` subfolder).
+First, download the example dataset and extract its contents (we assume
+throughout that you are in the ``bear_model`` folder and the data is in
+the ``data`` subfolder).
 
 ``wget https://marks.hms.harvard.edu/bear/ysd1_example.tar.gz``
 
 ``tar -xvf ysd1_example.tar.gz -C data``
 
-There are six files in the dataset, corresponding to
+There are five data files in the dataset, corresponding to
 training sequence data (`1_train.fasta` and `2_train.fasta`),
-testing data (`1_test.fasta` and `2_test.fasta`), the genome reference
-assembly (`virus_reference.fna`), and a list of the data (`datalist.csv`).
-
-Next we extract summary statistics from the datasets, for lags up to 5 (inclusive).
+testing data (`1_test.fasta` and `2_test.fasta`), and the genome reference
+assembly (`virus_reference.fna`).
+The file `datalist.csv` lists the dataset paths, data types (all fasta),
+and the data groups (training, testing, and reference).
+We provide `datalist.csv` as input to the summary statistic script,
 
 ``python summarize.py data/datalist.csv data/ysd1 -l 5``
 
-The kmer base counts will be found in files `data/ysd1_lag_1_file_0.tsv`,
+This extracts kmer transition counts up to lag 5 (inclusive).
+The counts for each lag will be found in the files `data/ysd1_lag_1_file_0.tsv`,
 `data/ysd1_lag_2_file_0.tsv`, `data/ysd1_lag_3_file_0.tsv`,
-`data/ysd1_lag_4_file_0.tsv`, and `data/ysd1_lag_5_file_0.tsv`.
-
-Finally, before training a BEAR model, datasets should be shuffled. In Linux,
+`data/ysd1_lag_4_file_0.tsv`, and `data/ysd1_lag_5_file_0.tsv`. Each line
+consists of an individual kmer and the transition counts in each data group.
+Finally, before training a BEAR model, datasets should be shuffled so that
+kmers are sampled randomly. In Linux,
 
 ``shuf data/ysd1_lag_5_file_0.tsv -o data/ysd1_6_lag_5_file_0_shuf.tsv``
 
@@ -125,16 +136,22 @@ to ensure this tutorial is reproducible.
 
 **Part 2: training**
 
-The scripts ``bear/models/train_bear_net.py`` and ``bear/models/train_bear_reference.py`` implement the above workflows for ``bear_net`` and ``bear_ref`` respectively.
-These scripts may be used to train on preprocessed transition count data in one or multiple files.
-They each may be used from the command line and accept a .cfg file specifying the training and testing paramers.
+The scripts ``bear/models/train_bear_net.py`` and
+``bear/models/train_bear_reference.py`` implement the above workflows
+for ``bear_net`` and ``bear_ref`` respectively.
+These scripts may be used to train on preprocessed transition count data in
+one or multiple files.
+They each may be used from the command line and accept a .cfg file specifying
+the training and testing parameters.
 
-Example config files are located in the config_files folder in the bear/models folder.
-These each contain descriptions of an example dataset made from whole genome sequencing data of the Salmonella phage YSD1 (NCBI SRA `link <https://www.ncbi.nlm.nih.gov/sra/?term=ERR956946>`);
-this data was split into training and testing 3:1 and an assembly decribed in `doi:10.1111/mmi.14396 <https://doi.org/10.1111/mmi.14396>`_ was included in the counts data.
-This sequence data was preprocessed into a transition counts matrix for 5-mers which may be seen in models/data/shuffled_virus_kmers_lag_5.tsv.
-All 6 config files decribe the same training regimen and differ only in the AR functions they use through the ar_func_name variable under [model] - linear, cnn, or stop - and whether they decribe training an AR or BEAR model through the train_ar variable under [train].
-The examples may be run by navigating to the bear/models directory and then using the command line to run one of
+Example config files are located in the config_files folder in the bear/models
+folder.
+All 6 config files decribe the same training regimen and differ only in
+the AR functions they use through the ar_func_name variable under
+[model] - linear, cnn, or stop - and whether they decribe training an AR or BEAR
+model through the train_ar variable under [train].
+The examples may be run by navigating to the bear/models directory and then
+using the command line to run one of
 
 ``python train_bear_net.py config_files/bear_lin_ar.cfg``
 
