@@ -8,7 +8,7 @@ def _bear_kmer_counts(kmer_seqs, kmer_total_counts,
                       condition_trans_counts=None, h=None, ar_func=None):
     """Get random variable of kmer transition counts conditioned on observed counts.
 
-    Either condition_trans_counts is not None or both of h and ar_func are not none.
+    Either condition_trans_counts is not None or both of h and ar_func are not None.
 
     Parameters
     ----------
@@ -125,7 +125,7 @@ def change_scope_params(lag, alphabet_size, make_ar_func,
     params : list
         List of parameters as tensorflow variables.
     h_signed : dtype
-        log(h) where h is the BEAR parameter.
+        log(h) where h is the BEAR concentration parameter.
     ar_func : function
         A function that takes a tensor of shape [A1, ..., An, lag, alphabet_size+1]
         of dtype and returns a tensor of shape [A1, ..., An, alphabet_size+1] of dtype
@@ -207,10 +207,10 @@ def train(data, num_kmers, epochs, ds_loc, alphabet, lag, make_ar_func, af_kwarg
     data : tensorflow data object
         Load sequence data using tools in dataloader.py. Minibatch before passing.
     num_kmers : int
-        Total number of kmers seen in data. Unsed to normalize estimate of loss.
+        Total number of kmers seen in data. Used to normalize estimate of loss.
     epochs : int
     ds_loc : int
-        Column in count data that coresponds with the training data.
+        Column in count data that corresponds with the training data.
     alphabet : str
         One of 'dna', 'rna', 'prot'.
     lag : int
@@ -235,7 +235,7 @@ def train(data, num_kmers, epochs, ds_loc, alphabet, lag, make_ar_func, af_kwarg
     params: list
         List of parameters as tensorflow variables.
     h_signed : dtype
-        log(h) where h is the BEAR parameter.
+        log(h) where h is the BEAR concentration parameter.
     ar_func : function
         The autoregressive function.
     """
@@ -327,9 +327,9 @@ def evaluation(data, ds_loc_train, ds_loc_test,
     data : tensorflow data object
         Load sequence data using tools in dataloader.py. Minibatch before passing.
     ds_loc_train : int
-        Column in count data that coresponds with the training data.
+        Column in count data that corresponds with the training data.
     ds_loc_test : int
-        Column in count data that coresponds with the testing data.
+        Column in count data that corresponds with the testing data.
     alphabet : str
         One of 'dna', 'rna', 'prot'.
     h : dtype
@@ -352,7 +352,7 @@ def evaluation(data, ds_loc_train, ds_loc_test,
         AR or BMM model.
     accuracy_ear, accuracy_arm, accuracy_van : float
         Accuracy of the data with the model evaluated as a BEAR,
-        AR or BMM model. Ties are resolved randomly.
+        AR or BMM model. Ties in maximum model probability are resolved randomly.
     """
     alphabet_size = len(core.alphabets_tf[alphabet]) - 1
 
