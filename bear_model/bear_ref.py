@@ -262,14 +262,14 @@ def _train_step(batch, num_kmers, h_signed, ar_func,
 def train(data, num_kmers, epochs, ds_loc, ds_loc_ref, alphabet, lag, make_ar_func, af_kwargs,
           learning_rate, optimizer_name, train_ar, acc_steps=1,
           params_restart=None, writer=None, dtype=tf.float64):
-    """Train a BEAR or AR model with reference transition counts using all available GPUs in parallel.
+    """Train a BEAR or AR model based on reference transition counts using all available GPUs in parallel.
 
     Parameters
     ----------
     data : tensorflow data object
         Load sequence data using tools in dataloader.py. Minibatch before passing.
     num_kmers : int
-        Total number of kmers seen in data. Unsed to normalize estimate of loss.
+        Total number of kmers seen in the data. Used to normalize estimate of loss.
     epochs : int
     ds_loc : int
         Column in count data that corresponds with the training data.

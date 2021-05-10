@@ -5,12 +5,12 @@ import tensorflow_io as tfio
 
 def dataloader(filename, alphabet, batch_size, num_ds,
                cache=True, header=False, n_par=1, dtype=tf.float64):
-    """Load counts data into tensorflow data object:
+    """Load counts data into tensorflow data object.
 
     Parameters
     ----------
     filename : str
-        Location of counts data, which should be tsv file of the following format:
+        Location of counts data, which should be a tsv file with rows in the format:
         kmer_sequence counts_matrix, delimited by a tab.
     alphabet : str
         One of 'dna', 'rna', 'prot'.

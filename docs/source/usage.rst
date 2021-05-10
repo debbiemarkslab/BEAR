@@ -37,51 +37,68 @@ file of preprocessed kmer transition counts using the ``dataloader`` submodule:
 
 .. autofunction:: bear_model.dataloader.dataloader
 
-The loaded datafile may then be used to train an AR of BEAR model using the ``bear_net`` submodule:
+The loaded dataset can then be used to train an AR of BEAR model with the
+``bear_net`` submodule:
 
 .. autofunction:: bear_model.bear_net.train
 
-To evaluate the performance of the trained model, use:
+To evaluate the performance of the trained model:
 
 .. autofunction:: bear_model.bear_net.evaluation
 
 To save a model and its learned parameters, use the python module ``dill``.
-To recover the misspecification diagnostic h and the autoregressive function
+To recover the concentration parameter/misspecification diagnostic :math:`h` and
+the learned autoregressive function
 from the list of saved parameters, use the ``change_scope_params`` function:
 
 .. autofunction:: bear_model.bear_net.change_scope_params
 
-Other autoregressive functions may be implemented by creating a
-``make_ar_func_...`` function based on the examples
+To embed your own autoregressive function, create a new
+``make_ar_func_...`` function using the examples
 :func:`bear_model.ar_funcs.make_ar_func_linear` and
-:func:`bear_model.ar_funcs.make_ar_func_cnn`.
+:func:`bear_model.ar_funcs.make_ar_func_cnn` as templates.
 
 **************
 bear_ref
 **************
 
-One may also build an autoregressive function from a reference sequence:
-A Jukes-Cantor mutation model (with error rate :math:`\tau`) from a reference
-sequence is first used to create an AR function, :math:`\tilde f`, on those
-transitions that are not to :math:`\$`, the stop symbol, using the transition
-counts in the reference :math:`c_{\text{ref}}`:
+Besides standard autoregressive models like linear models
+and neural networks, one can also build an autoregressive model based
+on a reference genome. In particular, we can predict the next base by looking up the
+previous :math:`L` bases :math:`k` in the reference, normalizing the observed transition
+counts :math:`\#_{\text{ref}}(k,b)` to form a probability, and accounting for
+noise using a Jukes-Cantor mutation model (with error rate :math:`\tau`).
+This gives the autoregressive function
 
 .. math::
-    \tilde{f}(b; k) = e^{-\tau}\frac{c_{\text{ref}, b, k}}{\sum_{b'\neq\$}c_{\text{ref}, b', k}}+\left(1-e^{-\tau}\right)\frac{1}{\#\{b'\neq\$\}}
+    \tilde{f}_{k,b} = e^{-\tau}\frac{\#_{\text{ref}}(k,b)}{\sum_{b'\neq\$}\#_{\text{ref}}(k,b')}+\left(1-e^{-\tau}\right)\frac{1}{|\mathcal{B}|}
 
-for :math:`b\neq\$` and :math:`\tilde{f}(\$; k)=0`, where :math:`\$` is the stop symbol.
-This is then combined with an AR function :math:`g` that can efficiently calculate transition probabilities from a one hot encoding of a kmer:
+for :math:`b\neq\$` and :math:`\tilde{f}_{k,\$}=0`, where :math:`\$` is the stop
+symbol and :math:`|\mathcal{B}|` is the alphabet size (excluding the stop symbol).
+When :math:`\sum_{b'\neq\$}\#_{\text{ref}}(k,b') = 0`, we default to
+:math:`\tilde{f}_{k,b} = 1/|\mathcal{B}|`.
+Reference genomes do not include stop symbols, and so do not provide predictions
+of read length; to account for this problem in a generalized way we introduce another
+AR function :math:`g` and combine it with the reference-based prediction,
 
 .. math::
-    f(b;k) = \left(\nu g(b; k) + (1-\nu)\tilde{f}(b;k)\right)/(\nu+1)
+    f_{k,b} = \nu g_{k,b} + (1-\nu)\tilde{f}_{k,b}
 
-for some :math:`\nu\in(0, 1)`. :math:`g` is usually chosen to be a function that always predicts a stop, implemented in :func:`bear_model.ar_funcs.make_ar_func_stop`.
-To allow this model to be trained efficiently the reference sequence is preprocessed with the training and testing data to allow :math:`c_{\text{ref}}` to make up a column of the loaded data.
-The submodule ``bear_ref`` allows one to train models of this type using
+for some :math:`\nu\in(0, 1)`. The function :math:`g` is typically chosen to
+predict a stop symbol with probability 1; this particular function is implemented
+in :func:`bear_model.ar_funcs.make_ar_func_stop`.
+To train the model efficiently, we preprocess the reference sequence
+along with the training and testing data, such that
+:math:`\#_{\text{ref}}` forms a column of the summarized data.
+The submodule ``bear_ref`` trains this reference-based
+BEAR model, optimizing the hyperparameters :math:`\tau` and :math:`\nu` as well as 
+any additional parameters in :math:`g`.
 
 .. autofunction:: bear_model.bear_ref.train
 
-:func:`bear_model.bear_ref.evaluate` and :func:`bear_model.bear_net.change_scope_params` amy be used in analogy with their coresponding functions in ``bear_net``.
+The functions :func:`bear_model.bear_ref.evaluate` and
+:func:`bear_model.bear_net.change_scope_params`  are analogous to the functions
+in ``bear_net`` with the same names.
 
 ###################
 Example BEAR models
