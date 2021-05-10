@@ -37,7 +37,7 @@ setup(
     name='bear-model',
     version=versioneer.get_version(),
     cmdclass=versioneer.get_cmdclass(),
-    description="Python package implementing the BEAR generative sequence model.",
+    description="A package for making BEAR generative sequence models.",
     long_description=readme,
     author="Marks Lab",
     author_email='alanamin@g.harvard.edu',
@@ -60,10 +60,11 @@ setup(
         ]
     },
     install_requires=requirements,
-    license="BSD (3-clause)",
+    license="MIT",
     classifiers=[
         'Development Status :: 2 - Pre-Alpha',
         'Natural Language :: English',
         'Programming Language :: Python :: 3',
     ],
+    keywords=('biological-sequences genomes tensorflow machine-learning'),
 )

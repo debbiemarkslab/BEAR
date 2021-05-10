@@ -1,13 +1,12 @@
 =======
-Credits
+Authors
 =======
 
-Maintainer
-----------
+This is a project of the Marks Lab in the Systems Biology Department
+at Harvard Medical School. It was developed by
 
-* Alan Amin, Marks Lab <alanamin@g.harvard.edu>
+* Alan Amin, <alanamin@g.harvard.edu>
 
-Contributors
-------------
+* Eli Weinstein, <eweinstein@g.harvard.edu>
 
-None yet. Why not be the first? See: CONTRIBUTING.rst
+* Debora Marks, <debbie@hms.harvard.edu>

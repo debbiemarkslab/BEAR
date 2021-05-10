@@ -9,7 +9,15 @@ BEAR
         :target: https://pypi.python.org/pypi/BEAR
 
 
-Python package implementing the BEAR generative sequence model.
+Bayesian embedded autoregresive (BEAR) models are generative probabilistic
+models for biological sequences that work at the genome scale.
+This package provides example BEAR models and tools for implementing new ones.
+For more information, see the paper::
 
-* Free software: 3-clause BSD license
-* Documentation: https://AlanNawzadAmin.github.io/BEAR.
+  TODO
+
+and the documentation::
+
+  https://AlanNawzadAmin.github.io/BEAR
+
+* Free software: MIT license
