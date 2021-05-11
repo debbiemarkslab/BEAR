@@ -228,13 +228,13 @@ Reference BEAR  3.79        36.8%    0.0142
 
 A few things to note:
 
-* The publication used a lag of 13, chosen by maximum marginal likelihood.
+* The paper used a lag of 13, chosen by maximum marginal likelihood.
   Here, using a lag of 5, the perplexities are much larger and the
   :math:`h` values are much smaller.
   This is due to the fact that the closest (in KL) AR model of lag 5,
   unsurprisingly, has a much larger perplexity than the lag 13 model, and
   is also much closer to the linear and CNN models.
-* As demonstrated in the publication, with enough data, the relative benefit of
+* As demonstrated in the paper, with enough data, the relative benefit of
   the BEAR over the vanilla BEAR is minimal. Since the lag is only 5 in this example, the
   data is sufficiently large (relative to the model flexibility)
   to make this true. However, the BEAR still outperforms the vanilla BEAR in

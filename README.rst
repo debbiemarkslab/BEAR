@@ -12,13 +12,12 @@ BEAR
 Bayesian embedded autoregresive (BEAR) models are generative probabilistic
 models for biological sequences that work at the genome scale.
 This package provides example BEAR models and tools for implementing new ones.
-For more information, see the paper::
 
-  TODO
+`Paper`: TODO
 
-and the documentation::
+`Documentation`_
 
-  https://AlanNawzadAmin.github.io/BEAR
+.. _Documentation: https://AlanNawzadAmin.github.io/BEAR
 
 * Free software: MIT license.
 
