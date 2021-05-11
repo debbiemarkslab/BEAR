@@ -1,6 +1,6 @@
-#####
-Usage
-#####
+############
+Introduction
+############
 
 This is a library for building Bayesian embedded autoregressive (BEAR) models,
 proposed in Amin et al. (link TODO). It provides (1) a script for extracting
@@ -165,7 +165,9 @@ On a Mac, replace ``shuf`` with ``gshuf`` (you may first need to install
 GNU coreutils, via e.g. ``brew install coreutils``).
 A preshuffled version is provided in the file
 ``models/data/ysd1_lag_5_file_0_preshuf.tsv``
-to ensure this tutorial is reproducible.
+to ensure this tutorial is reproducible. Shuffling is done in memory, so
+when using large lags on large datasets, you can use the **-mf** flag
+in `summarize.py` to ensure its output files are sufficiently small.
 
 **Part 2: training**
 
