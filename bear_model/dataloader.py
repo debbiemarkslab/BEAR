@@ -23,7 +23,7 @@ def dataloader(filename, alphabet, batch_size, num_ds,
     header : bool, default = False
         Whether or not there is a header in the counts data.
     n_par : int, default = 1
-        number of parallel calls to turn counts matrix strings to tensors.
+        Number of parallel calls to turn counts matrix strings to tensors.
     dtype : dtype, default = tf.float64
 
     Returns

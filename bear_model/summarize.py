@@ -4,30 +4,38 @@ datasets in order to train BEAR models. Usage:
 
 ``python summarize.py file out_prefix [-l L] [-mk MK] [-mf MF] [-p P] [-t T]``
 
-**Input:**
+Input
+-----
 
-:file: The input csv file with rows in the format `FILE, GROUP, TYPE`
+file : str
+    The input csv file with rows in the format `FILE, GROUP, TYPE`
     where `FILE` is a path, `GROUP` is an integer, and `TYPE` is either `fa`
     (denoting fasta) or `fq` (denoting fastq). Files with the same group will
     have their counts merged. All files must contain DNA sequences
     (A, C, G, and T alone).
 
-:out_prefix: The path and file name prefix for the output files.
+out_prefix : str
+    The file name prefix (including path) for the output files.
 
-:-l: The maximum lag (the truncation level).
+-l : int, default = 10
+    The maximum lag (the truncation level).
 
-:-mk: Maximum amount of memory available, in gigabytes (corresponding to the
+-mk : float, default = 12
+    Maximum amount of memory available, in gigabytes (corresponding to the
     KMC -m flag).
 
-:-mf: Maximum size of output files, in gigabytes.
+-mf : float, default = 0.1
+    Maximum size of output files, in gigabytes.
 
-:-p: Path to KMC binaries. If these binaries are in your PATH, there is no
+-p : str, default = ''
+    Path to KMC binaries. If these binaries are in your PATH, there is no
     need to use this option.
 
-:-t: Folder in which to store KMC's intermediate results. A valid path MUST be
+-t : str, default = 'tests/exdata/tmp/'
+    Folder in which to store KMC's intermediate results. A valid path MUST be
     provided.
 
-You can also run ``python summarize.py -h`` for help and more advanced options.
+You can run ``python summarize.py -h`` for help and more advanced options.
 
 **Output:**
 
@@ -42,7 +50,7 @@ Each file is a tsv with rows of the format::
     kmer\t[[transition counts in group 0 files],[transition counts in group 1 files],...]
 
 The symbol `[` in the kmer is the start symbol.
-Each counts vector is in the order `A, C, G, T, stop symbol`.
+Each counts vector is in the order `A, C, G, T, $` where $ is the stop symbol.
 
 .. caution:: KMC discards kmers with more than 4 billion counts, which may lead
     to errors on ultra large scale datasets.
@@ -578,7 +586,7 @@ if __name__ == '__main__':
     parser.add_argument('out_prefix', help='Prefix for output files.')
     parser.add_argument('-l', default=10, type=int,
                         help='Maximum lag of BEAR model.')
-    parser.add_argument('-mk', default=12, type=int,
+    parser.add_argument('-mk', default=12, type=float,
                         help='Maximum memory available to KMC (Gb)')
     parser.add_argument('-mf', default=0.1, type=float,
                         help='Maximum memory of final dataset chunks (Gb).')

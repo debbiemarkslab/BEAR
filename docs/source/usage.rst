@@ -61,9 +61,9 @@ To embed your own autoregressive function, create a new
 :func:`bear_model.ar_funcs.make_ar_func_linear` and
 :func:`bear_model.ar_funcs.make_ar_func_cnn` as templates.
 
-**************
+********
 bear_ref
-**************
+********
 
 Besides standard autoregressive models like linear models
 and neural networks, one can also build an autoregressive model based
