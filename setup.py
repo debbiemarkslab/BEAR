@@ -39,7 +39,7 @@ setup(
     cmdclass=versioneer.get_cmdclass(),
     description="A package for making BEAR generative biological sequence models.",
     long_description=readme,
-    author="Marks Lab",
+    author="Debora Marks Lab",
     author_email='alanamin@g.harvard.edu',
     url='https://github.com/ala243/BEAR',
     python_requires='>={}'.format('.'.join(str(n) for n in min_version)),
