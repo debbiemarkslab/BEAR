@@ -68,8 +68,8 @@ master_doc = 'index'
 
 # General information about the project.
 project = 'BEAR'
-copyright = '2021, Alan Amin, Marks Lab'
-author = 'Alan Amin, Marks Lab'
+copyright = '2021, Alan N. Amin, Eli N. Weinstein, Debora S. Marks'
+author = 'Alan N. Amin, Eli N. Weinstein, Debora S. Marks'
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
