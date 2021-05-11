@@ -7,8 +7,10 @@ proposed in Amin et al. (link TODO). It provides (1) a script for extracting
 summary statistics from large sequence datasets (which relies on KMC),
 (2) a python package with tools for building BEAR models in general
 (which relies on TensorFlow), and (3) scripts for training and evaluating
-specific example BEAR models. To use the package, follow the installation
-instructions and clone the `package repository`_.
+specific example BEAR models. To use the package, follow the
+:ref:`installation instructions<Installation>`
+and clone the `package repository`_.
+To get started with an example dataset, jump to the :ref:`tutorial<Tutorial>`.
 
 .. _package repository: https://github.com/AlanNawzadAmin/BEAR
 
@@ -134,14 +136,14 @@ record is
 **Part 1: preprocessing**
 
 First, download the example dataset and extract its contents (we assume
-throughout that you are in the ``bear_model`` folder and the data is in
-the ``data`` subfolder).
+throughout that you are in the ``bear_model`` folder).
 
 ``wget https://marks.hms.harvard.edu/bear/ysd1_example.tar.gz``
 
 ``tar -xvf ysd1_example.tar.gz -C data``
 
-There are five data files in the dataset, corresponding to
+There should now be five data files in the ``data`` subfolder,
+corresponding to
 training sequence data (`1_train.fasta` and `2_train.fasta`),
 testing data (`1_test.fasta` and `2_test.fasta`), and the genome reference
 assembly (`virus_reference.fna`).
@@ -173,10 +175,11 @@ independently of KMC.
 
 **Part 2: training**
 
-Now we can train the hyperparameters of the BEAR model via empirical Bayes.
+Now we can train the BEAR model via empirical Bayes.
 Config files for training three different AR models and their corresponding
 BEAR model can be found in the folder ``models/config_files``.
-You can run these examples on your own shuffled dataset by editing the config files to set
+You can run these examples on your own shuffled dataset from part 1 by editing
+the config files to set
 ``start_token = ysd1_lag_5_file_0_shuf.tsv``; by default the config files use the
 example preshuffled file.
 Note that in these examples we fix the model lag at the small value of 5 so
@@ -229,9 +232,9 @@ CNN BEAR        3.79        36.8%    0.0119
 Reference BEAR  3.79        36.8%    0.0142
 ==============  ==========  ======== ======
 
-A few things to note:
+A few things to note from looking at the results:
 
-* The paper used a lag of 13, chosen by maximum marginal likelihood.
+* In the paper we used a lag of 13 for this dataset, chosen by maximum marginal likelihood.
   Here, using a lag of 5, the perplexities are much larger and the
   :math:`h` values are much smaller.
   This is due to the fact that the closest (in KL) AR model of lag 5,

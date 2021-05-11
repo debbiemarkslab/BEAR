@@ -7,7 +7,7 @@ likelihood, perplexity, and accuracy. Usage:
 
 Example config files, with descriptions of the input parameters, can be found
 in the subfolder ``config_files`` (`bear_lin_bear.cfg`, `bear_lin_ar.cfg`,
-`bear_lin_bear.cfg`, and `bear_lin_ar.cfg`).
+`bear_cnn_bear.cfg`, and `bear_cnn_ar.cfg`).
 """
 import argparse
 import configparser
