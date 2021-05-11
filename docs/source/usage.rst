@@ -221,11 +221,11 @@ following table:
 Experiment      Perplexity  Accuracy h
 ==============  ==========  ======== ======
 Linear AR       3.99        32.9%    N/A
-CNN AR          3.85        35.6%    N/A
+CNN AR          3.85        35.8%    N/A
 Reference AR    3.84        36.5%    N/A
 BMM             3.79        36.8%    N/A
 Linear BEAR     3.79        36.8%    0.0433
-CNN BEAR        3.79        36.8%    0.0116
+CNN BEAR        3.79        36.8%    0.0119
 Reference BEAR  3.79        36.8%    0.0142
 ==============  ==========  ======== ======
 
