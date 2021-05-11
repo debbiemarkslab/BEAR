@@ -163,11 +163,13 @@ In Linux,
 
 On a Mac, replace ``shuf`` with ``gshuf`` (you may first need to install
 GNU coreutils, via e.g. ``brew install coreutils``).
-A preshuffled version is provided in the file
-``models/data/ysd1_lag_5_file_0_preshuf.tsv``
-to ensure this tutorial is reproducible. Shuffling is done in memory, so
-when using large lags on large datasets, you can use the **-mf** flag
+Note that shuffling is done in memory, so when using large lags on large datasets,
+you can use the **-mf** flag
 in `summarize.py` to ensure its output files are sufficiently small.
+A preshuffled dataset is provided in the file
+``models/data/ysd1_lag_5_file_0_preshuf.tsv``
+to ensure that part 2 of this tutorial is reproducible and can be run
+independently of KMC.
 
 **Part 2: training**
 
@@ -212,7 +214,8 @@ The scripts each output a folder named with the time at which they were run in
 * A pickle file with the learned hyperparameters. These hyperparameters can be
   recovered using the ``dill`` package.
 
-The performance results from these example models should match the following table:
+The performance results from these example models should match closely the
+following table:
 
 ==============  ==========  ======== ======
 Experiment      Perplexity  Accuracy h
