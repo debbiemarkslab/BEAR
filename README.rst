@@ -20,4 +20,8 @@ and the documentation::
 
   https://AlanNawzadAmin.github.io/BEAR
 
-* Free software: MIT license
+* Free software: MIT license.
+
+* This package was built using `Scientific Python Cookiecutter`_.
+
+.. _Scientific Python Cookiecutter: https://nsls-ii.github.io/scientific-python-cookiecutter/

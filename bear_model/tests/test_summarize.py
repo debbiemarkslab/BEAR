@@ -6,7 +6,6 @@ import csv
 import json
 import numpy as np
 import os
-import pytest
 
 
 def setup_args():
