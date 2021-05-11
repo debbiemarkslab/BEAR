@@ -18,7 +18,7 @@ def test_tf_io_version():
 
 def test_dataloader():
     # Check that the dataloader is otherwise behaving expectedly
-    f_name = resource_filename('bear_model', 'models/data/shuffled_virus_kmers_lag_5.tsv')
+    f_name = resource_filename('bear_model', 'data/ysd1_lag_5_file_0_preshuf.tsv')
     data = dataloader.dataloader(f_name, 'dna', 3, 3)
     kmers, counts = next(iter(data))
     kmers_real = np.array([b'TAATC', b'CGGTC', b'ACGCT'])
