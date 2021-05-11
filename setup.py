@@ -37,7 +37,7 @@ setup(
     name='bear-model',
     version=versioneer.get_version(),
     cmdclass=versioneer.get_cmdclass(),
-    description="A package for making BEAR generative sequence models.",
+    description="A package for making BEAR generative biological sequence models.",
     long_description=readme,
     author="Marks Lab",
     author_email='alanamin@g.harvard.edu',
