@@ -35,7 +35,7 @@ with open(path.join(here, 'requirements.txt')) as requirements_file:
 
 
 setup(
-    name='bear_model',
+    name='bear-model',
     description="A package for making BEAR generative biological sequence models.",
     long_description=readme,
     author="Debora Marks Lab",
