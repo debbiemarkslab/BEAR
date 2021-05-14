@@ -32,7 +32,7 @@ def main(config):
     writer = tf.summary.create_file_writer(out_folder)
 
     # Load data.
-    files = [config['data']['files_path']+file for file in os.listdir(config['data']['files_path'])
+    files = [os.path.join(config['data']['files_path'], file) for file in os.listdir(config['data']['files_path'])
              if file.startswith(config['data']['start_token'])]
     num_kmers = sum([(int)(subprocess.check_output(['wc', '-l', file]).split()[0]) for file in files])
     epochs = int(config['train']['epochs'])
