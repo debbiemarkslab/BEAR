@@ -1,26 +1,26 @@
-====
+****
 BEAR
-====
+****
+This repository contains the code to recreate experiments from our preprint (COMING SOON) and to deploy the BEAR model on sequence data.
 
-.. image:: https://travis-ci.com/AlanNawzadAmin/BEAR.svg?branch=master
-        :target: https://travis-ci.com/AlanNawzadAmin/BEAR
-
-.. image:: https://img.shields.io/pypi/v/bear-model.svg
-        :target: https://pypi.python.org/pypi/bear-model
-
-
+========
+Overview
+========
 Bayesian embedded autoregresive (BEAR) models are generative probabilistic
 models for biological sequences that work at the genome scale.
 This package provides example BEAR models and tools for implementing new ones.
 
-`Paper`: TODO
+=====
+Usage
+=====
+For instructions on running examples and deploying the BEAR model, consult the documentation at https://bear-model.readthedocs.io/en/latest/.
 
-`Documentation`_
+=======
+License
+=======
+This project is available under the MIT license.
 
-.. _Documentation: https://AlanNawzadAmin.github.io/BEAR
-
-* Free software: MIT license.
-
-* This package was built using `Scientific Python Cookiecutter`_.
-
-.. _Scientific Python Cookiecutter: https://nsls-ii.github.io/scientific-python-cookiecutter/
+=========
+Reference
+=========
+COMING SOON

@@ -3,6 +3,7 @@ from setuptools import setup, find_packages
 import sys
 import versioneer
 
+# This setup file was made using scientific python cookiecutter (see https://nsls-ii.github.io/scientific-python-cookiecutter/)
 
 # NOTE: This file must remain Python 2 compatible for the foreseeable future,
 # to ensure that we error out properly for people with outdated setuptools
@@ -41,7 +42,7 @@ setup(
     long_description=readme,
     author="Debora Marks Lab",
     author_email='alanamin@g.harvard.edu',
-    url='https://github.com/ala243/BEAR',
+    url='https://github.com/debbiemarkslab/BEAR',
     python_requires='>={}'.format('.'.join(str(n) for n in min_version)),
     packages=find_packages(exclude=['docs', 'tests']),
     entry_points={
@@ -52,9 +53,6 @@ setup(
     include_package_data=True,
     package_data={
         'bear_model': [
-            # When adding files here, remember to update MANIFEST.in as well,
-            # or else they will not be included in the distribution on PyPI!
-            # 'path/to/data_file',
             'models/data/shuffled_virus_kmers_lag_5.tsv'
             'models/config_files/*.cfg'
         ]
