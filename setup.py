@@ -1,7 +1,6 @@
 from os import path
 from setuptools import setup, find_packages
 import sys
-import versioneer
 
 # This setup file was made using scientific python cookiecutter (see https://nsls-ii.github.io/scientific-python-cookiecutter/)
 
@@ -36,8 +35,6 @@ with open(path.join(here, 'requirements.txt')) as requirements_file:
 
 setup(
     name='bear-model',
-    version=versioneer.get_version(),
-    cmdclass=versioneer.get_cmdclass(),
     description="A package for making BEAR generative biological sequence models.",
     long_description=readme,
     author="Debora Marks Lab",
