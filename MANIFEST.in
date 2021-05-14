@@ -11,4 +11,4 @@ recursive-include bear_model *.py
 include bear_model/data/ysd1_lag_5_file_0_preshuf.tsv
 include bear_model/models/train_bear_net.py
 include bear_model/models/train_bear_ref.py
-include bear_model/models/config_files/*.cfg 
+graft bear_model/models/config_files
