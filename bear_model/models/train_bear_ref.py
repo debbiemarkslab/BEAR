@@ -1,4 +1,5 @@
 """
+Train and evaluate AR or BEAR models that require a reference using maximal liklihood or empirical Bayes respectively.
 Train reference-based Bayesian embedded autoregressive models using
 empirical Bayes, and evaluate based on heldout
 likelihood, perplexity, and accuracy. Usage:
@@ -6,7 +7,7 @@ likelihood, perplexity, and accuracy. Usage:
 ``python train_bear_ref.py config.cfg``
 
 Example config files, with descriptions of the input parameters, can be found
-in the subfolder ``config_files`` (`bear_stop_bear.cfg` and `bear_stop_ar.cfg`).
+in the subfolder ``bear_model/models/config_files`` (`bear_stop_bear.cfg` and `bear_stop_ar.cfg`).
 """
 import argparse
 import configparser

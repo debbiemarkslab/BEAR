@@ -42,19 +42,18 @@ file of preprocessed kmer transition counts using the ``dataloader`` submodule:
 
 .. autofunction:: bear_model.dataloader.dataloader
 
-The loaded dataset can then be used to train an AR of BEAR model with the
+The loaded dataset can then be used to train an AR or BEAR model with the
 ``bear_net`` submodule:
 
 .. autofunction:: bear_model.bear_net.train
 
-To evaluate the performance of the trained model:
+One then may evaluate the performance of the trained model:
 
 .. autofunction:: bear_model.bear_net.evaluation
 
-To save a model and its learned parameters, use the python module ``dill``.
 To recover the concentration parameter/misspecification diagnostic :math:`h` and
 the learned autoregressive function
-from the list of saved parameters, use the ``change_scope_params`` function:
+from the outputted list of parameters, use the ``change_scope_params`` function:
 
 .. autofunction:: bear_model.bear_net.change_scope_params
 
@@ -108,6 +107,11 @@ in ``bear_net`` with the same names.
 ###################
 Example BEAR models
 ###################
+
+We have also written scripts that will perform the above workflow 
+- loading data, training, evaluating, and saving the list of parameters using ``dill`` -
+with parameters specified in a config file.
+Descriptions of the outputs of these scripts in given in the tutorial below.
 
 ************************
 models/train_bear_net.py
@@ -175,9 +179,9 @@ independently of KMC.
 
 **Part 2: training**
 
-Now we can train the BEAR model via empirical Bayes.
+Now we can train AR or BEAR model via maximal likelihood or empirical Bayes respectively.
 Config files for training three different AR models and their corresponding
-BEAR model can be found in the folder ``models/config_files``.
+BEAR model can be found in the folder ``bear_model/models/config_files``.
 You can run these examples on your own shuffled dataset from part 1 by editing
 the config files to set
 ``start_token = ysd1_lag_5_file_0_shuf.tsv``; by default the config files use the
@@ -213,7 +217,7 @@ The scripts each output a folder named with the time at which they were run in
   (Note that even when the BEAR model is the model that is trained, the
   perplexity, log likelihood and accuracy of the embedded AR model
   and vanilla BEAR model (BMM) are also reported; when the AR model is trained,
-  the performance of the corresponding BEAR model is reported.)
+  the performance of the corresponding BEAR model with :math:`h=1` is reported.)
 * A pickle file with the learned hyperparameters. These hyperparameters can be
   recovered using the ``dill`` package.
 

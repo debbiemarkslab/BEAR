@@ -83,7 +83,7 @@ def _bear_kmer_counts(kmer_seqs, kmer_total_counts, ref_counts,
         A tensor of shape [A1, ..., An, alphabet_size+1] of transition counts of each
         kmer to condition on. set to 0 if None.
     h : dtype, default = None
-        A positive constant of the h parameter from the BEAR model. Set to 1 if None.
+        A positive constant of the :math:`h` parameter from the BEAR model. Set to 1 if None.
     ar_func : function, default = None
         A function that takes a tensor of shape [A1, ..., An, lag, alphabet_size+1]
         of dtype and returns a tensor of shape [A1, ..., An, alphabet_size+1] of dtype
@@ -146,14 +146,14 @@ def _create_params(lag, alphabet_size, make_ar_func,
     af_kwargs : dict
         Keyword arguments for particular ar_func. For example, filter_width.
     dtype : tensorflow dtype, default = tf.float64
-        dtype for the ar_func and h.
+        dtype for the ar_func and h_signed.
 
     Returns
     -------
     params: list
         List of parameters as tensorflow variables.
     h_signed : dtype
-        log(h) where h is the BEAR concentration parameter.
+        :math:`\log(h)` where :math:`h` is the BEAR concentration parameter.
     ar_func : function
         The autoregressive function.
     """
@@ -188,7 +188,7 @@ def change_scope_params(lag, alphabet_size, make_ar_func,
     params : list
         List of parameters as tensorflow variables.
     h_signed : dtype
-        log(h) where h is the BEAR parameter.
+        :math:`\log(h)` where :math:`h` is the BEAR parameter.
     ar_func : function
         The autoregressive function.
     """
@@ -217,7 +217,7 @@ def _train_step(batch, num_kmers, h_signed, ar_func,
     num_kmers : int
         Total number of kmers seen in data. Used to normalize estimate of loss.
     h_signed : dtype
-        log(h) where h is the BEAR concentration parameter.
+        :math:`\log(h)` where :math:`h` is the BEAR concentration parameter.
     ar_func : function
         A function that takes a tensor of shape [A1, ..., An, lag, alphabet_size+1]
         of dtype and returns a tensor of shape [A1, ..., An, alphabet_size+1] of dtype
@@ -299,7 +299,7 @@ def train(data, num_kmers, epochs, ds_loc, ds_loc_ref, alphabet, lag, make_ar_fu
     params: list
         List of parameters as tensorflow variables.
     h_signed : dtype
-        log(h) where h is the BEAR concentration parameter.
+        :math:`\log(h)` where :math:`h` is the BEAR concentration parameter.
     ar_func : function
         The autoregressive function.
     """
@@ -401,7 +401,7 @@ def evaluation(data, ds_loc_train, ds_loc_test, ds_loc_ref,
     alphabet : str
         One of 'dna', 'rna', 'prot'.
     h : dtype
-        A positive constant of the h parameter from the BEAR model.
+        The :math:`h` parameter from the BEAR model.
     ar_func : function
         A function that takes a tensor of shape [A1, ..., An, lag, alphabet_size+1]
         of dtype and another of shape [A1, ..., An, alphabet_size+1] and returns a

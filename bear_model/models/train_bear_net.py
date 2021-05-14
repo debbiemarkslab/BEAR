@@ -1,12 +1,10 @@
 """
-Train Bayesian embedded linear or convolutional neural network
-autoregressive models using empirical Bayes, and evaluate based on heldout
-likelihood, perplexity, and accuracy. Usage:
+Train and evaluate AR or BEAR models using maximal liklihood or empirical Bayes respectively. Usage:
 
 ``python train_bear_net.py config.cfg``
 
 Example config files, with descriptions of the input parameters, can be found
-in the subfolder ``config_files`` (`bear_lin_bear.cfg`, `bear_lin_ar.cfg`,
+in the subfolder ``bear_model/models/config_files`` (`bear_lin_bear.cfg`, `bear_lin_ar.cfg`,
 `bear_cnn_bear.cfg`, and `bear_cnn_ar.cfg`).
 """
 import argparse

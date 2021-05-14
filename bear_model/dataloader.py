@@ -3,13 +3,13 @@ import tensorflow as tf
 import tensorflow_io as tfio
 
 
-def dataloader(filename, alphabet, batch_size, num_ds,
+def dataloader(file, alphabet, batch_size, num_ds,
                cache=True, header=False, n_par=1, dtype=tf.float64):
     """Load counts data into tensorflow data object.
 
     Parameters
     ----------
-    filename : str
+    file : str
         Location of counts data, which should be a tsv file with rows in the format:
         kmer_sequence counts_matrix, delimited by a tab.
     alphabet : str
@@ -33,7 +33,7 @@ def dataloader(filename, alphabet, batch_size, num_ds,
         [batch_size, num_ds, alphabet_size+1].
     """
     alphabet_size = len(core.alphabets_tf[alphabet]) - 1
-    data = tf.data.experimental.CsvDataset(filename, [tf.string, tf.string], header=header, field_delim='\t')
+    data = tf.data.experimental.CsvDataset(file, [tf.string, tf.string], header=header, field_delim='\t')
     data = data.batch(batch_size)
 
     def map_(kmer_sequences, counts_matrices):

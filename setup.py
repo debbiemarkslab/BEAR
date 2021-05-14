@@ -2,7 +2,8 @@ from os import path
 from setuptools import setup, find_packages
 import sys
 
-# This setup file was made using scientific python cookiecutter (see https://nsls-ii.github.io/scientific-python-cookiecutter/)
+# This setup file, and the .gitignore file of this repository were made using
+# scientific python cookiecutter (see https://nsls-ii.github.io/scientific-python-cookiecutter/)
 
 # NOTE: This file must remain Python 2 compatible for the foreseeable future,
 # to ensure that we error out properly for people with outdated setuptools
