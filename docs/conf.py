@@ -180,7 +180,7 @@ man_pages = [
 #  dir menu entry, description, category)
 texinfo_documents = [
     (master_doc, 'bear-model', 'BEAR Documentation',
-     author, 'bear-model', 'Python package implementing the BEAR generative sequence model.',
+     'bear-model', 'Python package implementing the BEAR generative sequence model.',
      'Miscellaneous'),
 ]
 

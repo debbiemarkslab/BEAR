@@ -111,20 +111,24 @@ Example BEAR models
 We have also written scripts that will perform the above workflow 
 - loading data, training, evaluating, and saving the list of parameters using ``dill`` -
 with parameters specified in a config file.
+Config files contain information about the training and testing data; parameters for training and testing; and parameters of the AR model.
+Example config  files may be found in ``bear_model/models/config_files``.
 Descriptions of the outputs of these scripts in given in the tutorial below.
 
 ************************
-models/train_bear_net.py
+bear_model/models/train_bear_net.py
 ************************
 
 .. automodule:: bear_model.models.train_bear_net
 
 ************************
-models/train_bear_ref.py
+bear_model/models/train_bear_ref.py
 ************************
 
 .. automodule:: bear_model.models.train_bear_ref
 
+If the data includes a reference the same config file may be used by either of the above scripts,
+with the specified AR model interpreted as :math:`g` when used with ``bear_model/models/train_bear_ref.py``.
 
 ########
 Tutorial
@@ -180,6 +184,7 @@ independently of KMC.
 **Part 2: training**
 
 Now we can train AR or BEAR model via maximal likelihood or empirical Bayes respectively.
+We will be using
 Config files for training three different AR models and their corresponding
 BEAR model can be found in the folder ``bear_model/models/config_files``.
 You can run these examples on your own shuffled dataset from part 1 by editing
@@ -192,7 +197,7 @@ marginal likelihood.
 All 6 config files use the same training protocol and differ only in
 the AR functions they use (see config file section ``[model]``)
 and whether they are BEAR or AR models (see config file entry ``train_ar``).
-To run the examples,
+To run the examples, move to the ``bear_models`` directory and run the following:
 
 **Linear AR** ``python models/train_bear_net.py models/config_files/bear_lin_ar.cfg``
 
@@ -208,7 +213,8 @@ To run the examples,
 
 Each example should not take more than a few minutes to run.
 The scripts each output a folder named with the time at which they were run in
-``out_data/logs``. This output folders contains:
+``out_data/logs`` (two folders will already be present if you tested your installation).
+This output folders contains:
 
 * A progress file that can be used to visualize the training curve using
   TensorBoard.
