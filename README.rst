@@ -16,6 +16,18 @@ Usage
 For instructions on running examples and deploying the BEAR model, consult the documentation at https://bear-model.readthedocs.io/en/latest/.
 
 =======
+Authors
+=======
+This is a project of the Marks Lab in the Systems Biology Department
+at Harvard Medical School. It was developed by
+
+* Alan Amin, <alanamin@g.harvard.edu>
+
+* Eli Weinstein, <eweinstein@g.harvard.edu>
+
+* Debora Marks, <debbie@hms.harvard.edu>
+
+=======
 License
 =======
 This project is available under the MIT license.
