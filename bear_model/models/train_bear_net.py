@@ -24,7 +24,7 @@ from pkg_resources import resource_filename
 def main(config):
     # Setup.
     time_stamp = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
-    if config['general']['out_folder'] = 'TEST':
+    if config['general']['out_folder'] == 'TEST':
         out_folder = os.path.join(resource_filename('bear_model', 'models/'),
                                   'out_data/logs', time_stamp)
     else:
