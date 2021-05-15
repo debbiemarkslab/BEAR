@@ -38,6 +38,8 @@ def setup_args():
     max_lag = 10
     in_file_set = os.path.join(exdata_path, 'infiles.csv')
     out_prefix = os.path.join(exdata_path, 'out/out')
+    os.makedirs(os.path.join(exdata_path, 'out'), exist_ok=True)
+    os.makedirs(os.path.join(exdata_path, 'tmp'), exist_ok=True)
     args = Args(in_file_set, out_prefix, l=max_lag, mk=1,
                 mf=0.000002, p='', r=True, t=os.path.join(exdata_path, 'tmp/'))
     return args, max_lag, in_file_set, out_prefix

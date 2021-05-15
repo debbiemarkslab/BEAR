@@ -13,5 +13,3 @@ include bear_model/models/train_bear_net.py
 include bear_model/models/train_bear_ref.py
 graft bear_model/models/config_files
 graft bear_model/tests
-graft bear_model/tests/exdata/out
-graft bear_model/tests/exdata/tmp

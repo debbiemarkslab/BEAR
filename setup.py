@@ -57,9 +57,7 @@ setup(
             'models/train_bear_ref.py',
             'models/config_files/*.cfg',
             'tests/check_summarize.py',
-            'tests/exdata',
-            'tests/exdata/out/placeholder.txt',
-            'tests/exdata/tmp/placeholder.txt'
+            'tests/exdata'
         ]
     },
     install_requires=requirements,
