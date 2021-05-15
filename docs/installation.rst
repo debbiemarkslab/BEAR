@@ -17,5 +17,5 @@ on Mac/Linux.
 
 .. _KMC: https://github.com/refresh-bio/KMC/releases
 
-To test your installation, run ``pytest`` in the BEAR directory.
+To test your installation, run ``pytest`` in the project directory.
 All tests should pass.

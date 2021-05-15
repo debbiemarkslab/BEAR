@@ -144,7 +144,7 @@ record is
 
 **Part 1: preprocessing**
 
-First, download the example dataset and extract its contents (we assume
+First, navigate to the folder ``bear_model`` and download the example dataset and extract its contents (we assume
 throughout that you are in the ``bear_model`` folder).
 
 ``wget https://marks.hms.harvard.edu/bear/ysd1_example.tar.gz``
