@@ -18,13 +18,18 @@ import datetime
 from bear_model import dataloader
 from bear_model import ar_funcs
 from bear_model import bear_net
+from pkg_resources import resource_filename
 
 
 def main(config):
     # Setup.
     time_stamp = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
-    out_folder = os.path.join(config['general']['out_folder'],
-                              'logs', time_stamp)
+    if config['general']['out_folder'] = 'TEST':
+        out_folder = os.path.join(resource_filename('bear_model', 'models/'),
+                                  'out_data/logs', time_stamp)
+    else:
+        out_folder = os.path.join(config['general']['out_folder'],
+                                  'logs', time_stamp)
     tf.random.set_seed(int(config['general']['seed']))
     dtype = getattr(tf, config['general']['precision'])
 
@@ -32,8 +37,11 @@ def main(config):
     writer = tf.summary.create_file_writer(out_folder)
 
     # Load data.
-    files = [os.path.join(config['data']['files_path'], file) for file in os.listdir(config['data']['files_path'])
-             if file.startswith(config['data']['start_token'])]
+    if config['data']['files_path'] == 'TEST':
+        files = [resource_filename('bear_model', 'data/ysd1_lag_5_file_0_preshuf.tsv')]
+    else:
+        files = [os.path.join(config['data']['files_path'], file) for file in os.listdir(config['data']['files_path'])
+                 if file.startswith(config['data']['start_token'])]
     num_kmers = sum([(int)(subprocess.check_output(['wc', '-l', file]).split()[0]) for file in files])
     epochs = int(config['train']['epochs'])
     num_ds = int(config['data']['num_ds'])

@@ -52,11 +52,14 @@ setup(
     package_data={
         'bear_model': [
             'models/data/shuffled_virus_kmers_lag_5.tsv',
+            'models/',
             'models/train_bear_net.py',
             'models/train_bear_ref.py',
             'models/config_files/*.cfg',
             'tests/check_summarize.py',
-            'tests/exdata'
+            'tests/exdata',
+            'tests/exdata/out/placeholder.txt',
+            'tests/exdata/tmp/placeholder.txt'
         ]
     },
     install_requires=requirements,
