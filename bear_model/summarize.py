@@ -257,18 +257,18 @@ class Unit2i:
             + ' -ci1 -cs1000000000000 -cx1000000000000 '
             + '-fq @{} {} {}'.format(
                     self.in_files_file, self.inter_file, self.args.t))
-        out_kmc = subprocess.run(' '.split(kmc_call), shell=True, stdout=PIPE, stderr=PIPE)
-        stdout_kmc = out_kmc.stdout.read()
-        stderr_kmc = out_kmc.stderr.read()
+        out_kmc = subprocess.run(kmc_call, shell=True, capture_output=True)
+        stdout_kmc = out_kmc.stdout.decode("utf-8")
+        stderr_kmc = out_kmc.stderr.decode("utf-8")
 
         # Run kmc sort and dump.
         kmc_dump_call = '{} transform {} sort {} dump {}'.format(
             os.path.join(self.args.p, 'kmc_tools'), self.inter_file,
             self.sort_file, self.out_file)
-        out_kmc_dump = subprocess.run(' '.split(kmc_dump_call), shell=True,
-                                      stdout=PIPE, stderr=PIPE)
-        stdout_kmc_dump = out_kmc_dump.stdout.read()
-        stderr_kmc_dump = out_kmc_dump.stderr.read()
+        out_kmc_dump = subprocess.run(kmc_dump_call, shell=True,
+                                      capture_output=True)
+        stdout_kmc_dump = out_kmc_dump.stdout.decode("utf-8")
+        stderr_kmc_dump = out_kmc_dump.stderr.decode("utf-8")
 
         # Save warning files.
         with open('{}_kmc_stdout_{}.txt'.format(self.args.out_prefix,
