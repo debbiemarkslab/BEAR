@@ -214,7 +214,7 @@ To run the examples, move to the ``bear_models`` directory and run the following
 
 Each example should not take more than a few minutes to run.
 The scripts each output a folder named with the time at which they were run in
-``out_data/logs`` (two folders will already be present if you tested your installation).
+``out_data/logs`` (two folders may already be present if you tested your installation).
 This output folders contains:
 
 * A progress file that can be used to visualize the training curve using
