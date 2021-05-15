@@ -12,3 +12,4 @@ include bear_model/data/ysd1_lag_5_file_0_preshuf.tsv
 include bear_model/models/train_bear_net.py
 include bear_model/models/train_bear_ref.py
 graft bear_model/models/config_files
+graft bear_model/tests

@@ -127,8 +127,9 @@ bear_model/models/train_bear_ref.py
 
 .. automodule:: bear_model.models.train_bear_ref
 
-If the data includes a reference the same config file may be used by either of the above scripts,
+If the data includes a reference, the same config file may be used by either of the above scripts,
 with the specified AR model interpreted as :math:`g` when used with ``bear_model/models/train_bear_ref.py``.
+These scripts are easiest to use through the command line, as shown in the tutorial below.
 
 ########
 Tutorial
