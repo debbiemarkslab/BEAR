@@ -42,7 +42,7 @@ setup(
     author_email='alanamin@g.harvard.edu',
     url='https://github.com/debbiemarkslab/BEAR',
     python_requires='>={}'.format('.'.join(str(n) for n in min_version)),
-    packages=find_packages(exclude=['docs', 'tests']),
+    packages=find_packages(exclude=['docs']),
     entry_points={
         'console_scripts': [
             # 'command = some.module:some_function',

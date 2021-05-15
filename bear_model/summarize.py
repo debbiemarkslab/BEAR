@@ -75,6 +75,7 @@ import multiprocessing
 import os
 import random
 import subprocess
+from subprocess import PIPE
 from typing import Any
 
 
@@ -256,7 +257,7 @@ class Unit2i:
             + ' -ci1 -cs1000000000000 -cx1000000000000 '
             + '-fq @{} {} {}'.format(
                     self.in_files_file, self.inter_file, self.args.t))
-        out_kmc = subprocess.run(kmc_call, shell=True, capture_output=True)
+        out_kmc = subprocess.run(' '.split(kmc_call), shell=True, stdout=PIPE, stderr=PIPE)
         stdout_kmc = out_kmc.stdout.decode("utf-8")
         stderr_kmc = out_kmc.stderr.decode("utf-8")
 
@@ -264,8 +265,8 @@ class Unit2i:
         kmc_dump_call = '{} transform {} sort {} dump {}'.format(
             os.path.join(self.args.p, 'kmc_tools'), self.inter_file,
             self.sort_file, self.out_file)
-        out_kmc_dump = subprocess.run(kmc_dump_call, shell=True,
-                                      capture_output=True)
+        out_kmc_dump = subprocess.run(' '.split(kmc_dump_call), shell=True,
+                                      stdout=PIPE, stderr=PIPE)
         stdout_kmc_dump = out_kmc_dump.stdout.decode("utf-8")
         stderr_kmc_dump = out_kmc_dump.stderr.decode("utf-8")
 
