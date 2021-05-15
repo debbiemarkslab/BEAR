@@ -21,6 +21,7 @@ import numpy as np
 from bear_model import dataloader
 from bear_model import ar_funcs
 from bear_model import bear_ref
+from pkg_resources import resource_filename
 
 
 def main(config):
