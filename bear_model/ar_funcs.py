@@ -13,7 +13,7 @@ def _normalize_layer(layer, reduce_dims=[-1]):
 
     Returns
     -------
-    noramlized_layer : tensor
+    normalized_layer : tensor
     """
     mean, var = tf.nn.moments(layer, reduce_dims, keepdims=True)
     layer = (layer - mean) / tf.sqrt(var + 1E-5)
