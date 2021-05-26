@@ -45,7 +45,8 @@ def main(config):
     else:
         files = [os.path.join(config['data']['files_path'], file) for file in os.listdir(config['data']['files_path'])
                  if file.startswith(config['data']['start_token'])]
-    num_kmers = sum([(int)(subprocess.check_output(['wc', '-l', file]).split()[0]) for file in files])
+    num_kmers = sum([(int)(subprocess.run('wc -l '+file, shell=True, capture_output=True
+                                         ).stdout.decode("utf-8").split()[0]) for file in files])
     epochs = int(config['train']['epochs'])
     num_ds = int(config['data']['num_ds'])
 
@@ -149,6 +150,8 @@ def main(config):
         config['results']['heldout_accuracy_BMM'] = str(acc_van.numpy())
         with open(os.path.join(out_folder, 'config.cfg'), 'w') as cw:
             config.write(cw)
+            
+    return 1
 
 
 if __name__ == "__main__":
