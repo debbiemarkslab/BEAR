@@ -1,7 +1,7 @@
 # A generative nonparametric Bayesian model for whole genomes
+
 This repository contains the code to recreate experiments from our paper "A generative nonparametric Bayesian model for
 whole genomes" and to deploy the BEAR model on sequence data.
-
 
 ## Overview
 
