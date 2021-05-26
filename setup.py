@@ -38,9 +38,6 @@ setup(
     name='bear-model',
     description="A package for making BEAR generative biological sequence models.",
     long_description=readme,
-    author="Debora Marks Lab",
-    author_email='alanamin@g.harvard.edu',
-    url='https://github.com/debbiemarkslab/BEAR',
     python_requires='>={}'.format('.'.join(str(n) for n in min_version)),
     packages=find_packages(exclude=['docs']),
     entry_points={

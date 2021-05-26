@@ -5,7 +5,7 @@ Installation
 To install the python package, use a clean Python 3 environment and run::
 
     pip install --upgrade pip
-    pip install "git+https://github.com/debbiemarkslab/BEAR.git"
+    pip install .
 
 Preprocessing fasta and fastq files requires installation of `KMC`_.
 This code has been tested on KMC version 3.1.1. Mac and Linux users should run
