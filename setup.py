@@ -25,9 +25,6 @@ pip install --upgrade pip
 
 here = path.abspath(path.dirname(__file__))
 
-with open(path.join(here, 'README.rst'), encoding='utf-8') as readme_file:
-    readme = readme_file.read()
-
 with open(path.join(here, 'requirements.txt')) as requirements_file:
     # Parse requirements.txt, ignoring any commented-out lines.
     requirements = [line for line in requirements_file.read().splitlines()
@@ -37,7 +34,6 @@ with open(path.join(here, 'requirements.txt')) as requirements_file:
 setup(
     name='bear-model',
     description="A package for making BEAR generative biological sequence models.",
-    long_description=readme,
     python_requires='>={}'.format('.'.join(str(n) for n in min_version)),
     packages=find_packages(exclude=['docs']),
     entry_points={
