@@ -8,8 +8,7 @@ summary statistics from large sequence datasets (which relies on KMC),
 (2) a python package with tools for building BEAR models in general
 (which relies on TensorFlow), and (3) scripts for training and evaluating
 specific example BEAR models. To use the package, follow the
-:ref:`installation instructions<Installation>`
-and clone the `package repository`_.
+:ref:`installation instructions<Installation>`.
 To get started with an example dataset, jump to the :ref:`tutorial<Tutorial>`.
 
 ###########################
