@@ -1,18 +1,20 @@
 ****
 BEAR
 ****
-This repository contains the code to recreate experiments from our preprint (https://www.biorxiv.org/content/10.1101/2021.05.30.446360v1) and to deploy the BEAR model on sequence data.
 
 ========
 Overview
 ========
-Bayesian embedded autoregresive (BEAR) models are generative probabilistic
-models for biological sequences that work at the genome scale.
-This package provides example BEAR models and tools for implementing new ones.
+This repository contains code associated with the preprint
+[A generative nonparametric Bayesian model for whole genomes (2021)](https://www.biorxiv.org/content/10.1101/2021.05.30.446360v1),
+which proposes Bayesian embedded autoregresive (BEAR) models.
+The repository provides example BEAR models as well as tools for implementing new models.
+It enables building, training and evaluating BEAR models on large scale
+sequencing datasets, including whole genome, transcriptomic and metagenomic data.
 
-=====
-Usage
-=====
+=============
+Documentation
+=============
 For instructions on running examples and deploying the BEAR model, consult the documentation at https://bear-model.readthedocs.io/en/latest/.
 
 =======
