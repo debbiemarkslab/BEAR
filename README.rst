@@ -1,7 +1,7 @@
 ****
 BEAR
 ****
-This repository contains the code to recreate experiments from our preprint (COMING SOON) and to deploy the BEAR model on sequence data.
+This repository contains the code to recreate experiments from our preprint (https://www.biorxiv.org/content/10.1101/2021.05.30.446360v1) and to deploy the BEAR model on sequence data.
 
 ========
 Overview
@@ -35,4 +35,6 @@ This project is available under the MIT license.
 =========
 Reference
 =========
-COMING SOON
+Preprint: A. N. Amin, E. N. Weinstein, D. S. Marks,
+A generative nonparametric Bayesian model for whole genomes, 2021.
+https://www.biorxiv.org/content/10.1101/2021.05.30.446360v1
