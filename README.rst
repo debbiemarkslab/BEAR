@@ -35,6 +35,6 @@ This project is available under the MIT license.
 =========
 Reference
 =========
-Preprint: A. N. Amin, E. N. Weinstein, D. S. Marks,
-A generative nonparametric Bayesian model for whole genomes, 2021.
+Preprint: A. N. Amin\*, E. N. Weinstein\*, D. S. Marks,
+A generative nonparametric Bayesian model for whole genomes, 2021 (\* equal contribution).
 https://www.biorxiv.org/content/10.1101/2021.05.30.446360v1
