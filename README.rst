@@ -6,7 +6,7 @@ BEAR
 Overview
 ========
 This repository contains code associated with the preprint
-[A generative nonparametric Bayesian model for whole genomes (2021)](https://www.biorxiv.org/content/10.1101/2021.05.30.446360v1),
+`A generative nonparametric Bayesian model for whole genomes (2021) <https://www.biorxiv.org/content/10.1101/2021.05.30.446360v1>`_,
 which proposes Bayesian embedded autoregresive (BEAR) models.
 The repository provides example BEAR models as well as tools for implementing new models.
 It enables building, training and evaluating BEAR models on large scale
