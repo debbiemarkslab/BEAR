@@ -87,3 +87,4 @@ target/
 # Output files and data
 bear_model/models/out_data
 **.tar.gz**
+bear_model/data
