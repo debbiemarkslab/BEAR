@@ -47,7 +47,8 @@ def make_ar_func_linear(lag, alphabet_size, dtype=tf.float64):
 
 
 def make_ar_func_cnn(lag, alphabet_size,
-                     filter_width=8, num_filters=30, dtype=tf.float64):
+                     filter_width=8, num_filters=30,
+                     kmer_layer1_width=16, dtype=tf.float64):
     """Make a convolutional neural network autoregressive function.
 
     Parameters
@@ -56,6 +57,7 @@ def make_ar_func_cnn(lag, alphabet_size,
     alphabet_size : int
     filter_width : int or float, default = 8
     num_filters : int or float, default = 30
+    kmer_layer1_width : int, default = 16
     dtype : dtype, default = tf.float64
 
     Returns
@@ -69,8 +71,8 @@ def make_ar_func_cnn(lag, alphabet_size,
     """
     filter_width = int(filter_width)
     num_filters = int(num_filters)
+    kmer_layer1_width = int(kmer_layer1_width)
     small_start = 0.05
-    kmer_layer1_width = 16
     final_shape = [alphabet_size+1]
     data_dim = [lag, alphabet_size+1]
     filters = tf.random.normal([filter_width, data_dim[1], num_filters], dtype=dtype)

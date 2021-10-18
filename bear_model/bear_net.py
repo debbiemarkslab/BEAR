@@ -199,7 +199,7 @@ def _train_step(batch, num_kmers, h_signed, ar_func,
 
 def train(data, num_kmers, epochs, ds_loc, alphabet, lag, make_ar_func, af_kwargs,
           learning_rate, optimizer_name, train_ar, acc_steps=1,
-          params_restart=None, writer=None, dtype=tf.float64):
+          params_restart=None, writer=None, loss_save=None, dtype=tf.float64):
     """Train a BEAR or AR model using all available GPUs in parallel.
 
     Parameters
@@ -224,6 +224,8 @@ def train(data, num_kmers, epochs, ds_loc, alphabet, lag, make_ar_func, af_kwarg
     train_ar : bool
         Whether to train an AR (True) or BEAR (False) model.
     writer : tensorboard writer object, default = None
+    loss_save : list, default = None
+        Pass a list to have losses at each step appended to it.
     acc_steps : int, default = 1
         Number of steps to accumulate gradients over.
     params_restart : list of tensorflow variables, default = None
@@ -301,6 +303,8 @@ def train(data, num_kmers, epochs, ds_loc, alphabet, lag, make_ar_func, af_kwarg
             if writer is not None:
                 with writer.as_default():
                     tf.summary.scalar('elbo', - loss / acc_steps, step=step)
+            if loss_save != None:
+                loss_save.append(-loss/acc_steps)
             # Update gradients
             dist_add_grads(params, acc_grads, optimizer)
             # Reset accumulated gradients and cumulative loss to zero.
@@ -316,11 +320,72 @@ def train(data, num_kmers, epochs, ds_loc, alphabet, lag, make_ar_func, af_kwarg
         af_kwargs, params, dtype=dtype)
     return params, h_signed, ar_func
 
-
+def _evaluation_step(batch, h, ar_func, van_reg, alphabet_size, use_train, dtype=tf.float64):
+        kmer_seqs = batch[0]
+        transition_counts_test = batch[1]
+        if use_train:
+            transition_counts_train = batch[2]
+            van_condition = transition_counts_train[:, None, :] + van_reg[:, None]
+        else:
+            transition_counts_train = None
+            van_condition = van_reg[:, None] * tf.ones([1, alphabet_size + 1], dtype=dtype)
+        
+        kmer_total_counts_test = tf.math.reduce_sum(transition_counts_test, axis=-1)
+        # Get posteriors.
+        post_ear = _bear_kmer_counts(kmer_seqs, kmer_total_counts_test,
+                                     condition_trans_counts=transition_counts_train,
+                                     h=h, ar_func=ar_func)
+        post_arm = _ar_kmer_counts(kmer_seqs, kmer_total_counts_test, ar_func)
+        post_van = _bear_kmer_counts(kmer_seqs, kmer_total_counts_test[:, None],
+                                     condition_trans_counts=van_condition)
+        # Get likelihoods.
+        log_likelihood_ear = tf.reduce_sum(
+            post_ear.counts_log_prob(transition_counts_test))
+        log_likelihood_arm = tf.reduce_sum(
+            post_arm.counts_log_prob(transition_counts_test))
+        log_likelihood_van = tf.reduce_sum(
+            post_van.counts_log_prob(transition_counts_test[:, None, :]), axis=0)
+        # Get most likely transition and accuracy.
+        ml_ear = post_ear.ml_output()
+        ml_arm = post_arm.ml_output()
+        ml_van = post_van.ml_output()
+        oh_ml_ear = tf.cast(tf.math.equal(ml_ear[..., None],
+                                          tf.range(alphabet_size+1, dtype=dtype)),
+                            dtype=dtype)
+        oh_ml_arm = tf.cast(tf.math.equal(ml_arm[..., None],
+                                          tf.range(alphabet_size+1, dtype=dtype)),
+                            dtype=dtype)
+        oh_ml_van = tf.cast(tf.math.equal(ml_van[..., None],
+                                          tf.range(alphabet_size+1, dtype=dtype)),
+                            dtype=dtype)
+        
+        correct_ear = tf.math.reduce_sum(transition_counts_test*oh_ml_ear)
+        correct_arm = tf.math.reduce_sum(transition_counts_test*oh_ml_arm)
+        correct_van = tf.math.reduce_sum(tf.math.reduce_sum(
+            transition_counts_test[:, None, :]*oh_ml_van, axis=0), axis=-1)
+        # Sum total number of transitions.
+        total_len = tf.math.reduce_sum(transition_counts_test)
+        
+        return (log_likelihood_ear, log_likelihood_arm, log_likelihood_van,
+                correct_ear, correct_arm, correct_van, total_len)
+    
 @tf.function
+def _distributed_evaluation_step(batch, h, ar_func, van_reg, alphabet_size, use_train,
+                                 strategy):
+    (log_likelihood_ear, log_likelihood_arm, log_likelihood_van,
+        correct_ear, correct_ar, correct_van, total_len) = strategy.run(
+        _evaluation_step, args=(batch, h, ar_func, van_reg, alphabet_size, use_train))
+    return (strategy.reduce(tf.distribute.ReduceOp.SUM, log_likelihood_ear, axis=None),
+            strategy.reduce(tf.distribute.ReduceOp.SUM, log_likelihood_arm, axis=None),
+            strategy.reduce(tf.distribute.ReduceOp.SUM, log_likelihood_van, axis=None),
+            strategy.reduce(tf.distribute.ReduceOp.SUM, correct_ear, axis=None),
+            strategy.reduce(tf.distribute.ReduceOp.SUM, correct_ar, axis=None),
+            strategy.reduce(tf.distribute.ReduceOp.SUM, correct_van, axis=None),
+            strategy.reduce(tf.distribute.ReduceOp.SUM, total_len, axis=None))
+
 def evaluation(data, ds_loc_train, ds_loc_test,
                alphabet, h, ar_func, van_reg, dtype=tf.float64):
-    """Evaluate a trained BEAR, AR or vanilla BEAR model.
+    """Evaluate a trained BEAR, AR or vanilla BEAR model. Can use multiple GPUs in parallel.
 
     Parameters
     ----------
@@ -328,6 +393,7 @@ def evaluation(data, ds_loc_train, ds_loc_test,
         Load sequence data using tools in dataloader.py. Minibatch before passing.
     ds_loc_train : int
         Column in count data that corresponds with the training data.
+        Set to -1 for conditioning on training data.
     ds_loc_test : int
         Column in count data that corresponds with the testing data.
     alphabet : str
@@ -338,7 +404,7 @@ def evaluation(data, ds_loc_train, ds_loc_test,
         A function that takes a tensor of shape [A1, ..., An, lag, alphabet_size+1]
         of dtype and returns a tensor of shape [A1, ..., An, alphabet_size+1] of dtype
         of transition probabilities for each kmer. The autoregressive function.
-    van_reg : float
+    van_reg : 1D numpy or tensorflow array
         Prior on vanilla BEAR model (Dirichlet concentration parameter).
     dtype : dtype, default = tf.float64
 
@@ -356,57 +422,39 @@ def evaluation(data, ds_loc_train, ds_loc_test,
     """
     alphabet_size = len(core.alphabets_tf[alphabet]) - 1
 
-    def map_(kmers, counts):
-        return (core.tf_one_hot(kmers, alphabet),
-                tf.gather(counts, ds_loc_train, axis=1),
-                tf.gather(counts, ds_loc_test, axis=1))
-    data_iter = iter(data.map(map_))
+    strategy = tf.distribute.MirroredStrategy()
+    use_train = ds_loc_train >= 0
+    if use_train:
+        def map_(kmers, counts):
+            return (core.tf_one_hot(kmers, alphabet),
+                    tf.gather(counts, ds_loc_test, axis=1),
+                    tf.gather(counts, ds_loc_train, axis=1))
+    else:
+        def map_(kmers, counts):
+            return (core.tf_one_hot(kmers, alphabet),
+                    tf.gather(counts, ds_loc_test, axis=1))
+    data_iter = iter(strategy.experimental_distribute_dataset(data.map(map_).prefetch(10)))
 
     log_likelihood_ear = tf.constant(0., dtype=dtype)
     log_likelihood_arm = tf.constant(0., dtype=dtype)
-    log_likelihood_van = tf.constant(0., dtype=dtype)
+    log_likelihood_van = tf.zeros(len(van_reg), dtype=dtype)
     correct_ear = tf.constant(0., dtype=dtype)
     correct_arm = tf.constant(0., dtype=dtype)
-    correct_van = tf.constant(0., dtype=dtype)
+    correct_van = tf.zeros(len(van_reg), dtype=dtype)
     total_len = tf.constant(0., dtype=dtype)
 
     for batch in data_iter:
-        kmer_seqs = batch[0]
-        transition_counts_train = batch[1]
-        transition_counts_test = batch[2]
-        kmer_total_counts_test = tf.math.reduce_sum(transition_counts_test, axis=-1)
-        # Get posteriors.
-        post_ear = _bear_kmer_counts(kmer_seqs, kmer_total_counts_test,
-                                     condition_trans_counts=transition_counts_train,
-                                     h=h, ar_func=ar_func)
-        post_arm = _ar_kmer_counts(kmer_seqs, kmer_total_counts_test, ar_func)
-        post_van = _bear_kmer_counts(kmer_seqs, kmer_total_counts_test,
-                                     condition_trans_counts=transition_counts_train + van_reg)
-        # Get likelihoods.
-        log_likelihood_ear += tf.reduce_sum(
-            post_ear.counts_log_prob(transition_counts_test))
-        log_likelihood_arm += tf.reduce_sum(
-            post_arm.counts_log_prob(transition_counts_test))
-        log_likelihood_van += tf.reduce_sum(
-            post_van.counts_log_prob(transition_counts_test))
-        # Get most likely transition and accuracy.
-        ml_ear = post_ear.ml_output()
-        ml_arm = post_arm.ml_output()
-        ml_van = post_van.ml_output()
-        oh_ml_ear = tf.cast(tf.math.equal(ml_ear[..., None],
-                                          tf.range(alphabet_size+1, dtype=dtype)),
-                            dtype=dtype)
-        oh_ml_arm = tf.cast(tf.math.equal(ml_arm[..., None],
-                                          tf.range(alphabet_size+1, dtype=dtype)),
-                            dtype=dtype)
-        oh_ml_van = tf.cast(tf.math.equal(ml_van[..., None],
-                                          tf.range(alphabet_size+1, dtype=dtype)),
-                            dtype=dtype)
-        correct_ear += tf.math.reduce_sum(transition_counts_test*oh_ml_ear)
-        correct_arm += tf.math.reduce_sum(transition_counts_test*oh_ml_arm)
-        correct_van += tf.math.reduce_sum(transition_counts_test*oh_ml_van)
-        # Sum total number of transitions.
-        total_len += tf.math.reduce_sum(transition_counts_test)
+        (ll_ear, ll_arm, ll_van, cor_ear, cor_arm, cor_van, tot_lens
+        ) = _distributed_evaluation_step(
+            batch, h, ar_func, van_reg, alphabet_size, use_train, strategy)
+        log_likelihood_ear += ll_ear
+        log_likelihood_arm += ll_arm
+        log_likelihood_van += ll_van
+        correct_ear += cor_ear
+        correct_arm += cor_arm
+        correct_van += cor_van
+        total_len += tot_lens
+
     return (log_likelihood_ear, log_likelihood_arm, log_likelihood_van,
             tf.exp(-log_likelihood_ear/total_len),
             tf.exp(-log_likelihood_arm/total_len),

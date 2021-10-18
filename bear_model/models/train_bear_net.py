@@ -15,6 +15,8 @@ import os
 import json
 import subprocess
 import datetime
+import numpy as np
+from matplotlib import pyplot as plt
 from bear_model import dataloader
 from bear_model import ar_funcs
 from bear_model import bear_net
@@ -27,9 +29,13 @@ def main(config):
     if config['general']['out_folder'] == 'TEST':
         out_folder = os.path.join(resource_filename('bear_model', 'models/'),
                                   'out_data/logs', time_stamp)
+    elif config['general']['out_folder'][-1] == '*':
+        out_folder = config['general']['out_folder'][:-1]
+        os.system('mkdir -p '+out_folder)
     else:
         out_folder = os.path.join(config['general']['out_folder'],
                                   'logs', time_stamp)
+        
     tf.random.set_seed(int(config['general']['seed']))
     dtype = getattr(tf, config['general']['precision'])
 
@@ -44,28 +50,36 @@ def main(config):
                  if file.startswith(config['data']['start_token'])]
     num_kmers = sum([(int)(subprocess.run('wc -l '+file, shell=True, capture_output=True
                                          ).stdout.decode("utf-8").split()[0]) for file in files])
-    epochs = int(config['train']['epochs'])
-    num_ds = int(config['data']['num_ds'])
-
     kmer_batch_size = float(config['train']['batch_size'])
     if kmer_batch_size <= 1:
         kmer_batch_size = (int)(num_kmers * kmer_batch_size)
     else:
         kmer_batch_size = (int)(kmer_batch_size)
+    epochs = config['train']['epochs']
+    if epochs[-1] == 's':
+        epochs = int(epochs[:-1])//(1+num_kmers//kmer_batch_size)+1
+    else:
+        epochs = int(epochs)
+    num_ds = int(config['data']['num_ds'])
+
+    if config['data']['sparse'] == 'True':
+        dataload_func = dataloader.sparse_dataloader
+    else:
+        dataload_func = dataloader.dataloader
 
     if len(files) == 1:
-        data = dataloader.dataloader(files[0], config['data']['alphabet'],
-                                     kmer_batch_size, num_ds,
-                                     cache=(bool)((int)(config['train']['cache'])),
-                                     dtype=dtype)
+        data = dataload_func(files[0], config['data']['alphabet'],
+                             kmer_batch_size, num_ds,
+                             cache=config['train']['cache'] == 'True',
+                             dtype=dtype)
     else:
         # Interleave loaded data from multiple files.
         data = tf.data.Dataset.from_tensor_slices(files)
         data = data.interleave(
-            lambda x: dataloader.dataloader(x, config['data']['alphabet'],
-                                            kmer_batch_size, num_ds,
-                                            cache=(bool)((int)(config['train']['cache'])),
-                                            dtype=dtype),
+            lambda x: dataload_func(x, config['data']['alphabet'],
+                                    kmer_batch_size, num_ds,
+                                    cache=config['train']['cache'] == 'True',
+                                    dtype=dtype),
             cycle_length=4, num_parallel_calls=4, deterministic=False)
     data_train = data.repeat(epochs)
     print("data_loaded")
@@ -78,24 +92,21 @@ def main(config):
         config.write(cw)
 
     # Load hyperparameters.
-    ds_loc = json.loads(config['data']['train_column'])
+    ds_loc = int(config['data']['train_column'])
     alphabet = config['data']['alphabet']
     lag = int(config['hyperp']['lag'])
 
     make_ar_func = getattr(ar_funcs, 'make_ar_func_'+config['model']['ar_func_name'])
-    af_kwargs = {}
-    for key in config['model']:
-        if key != 'ar_func_name':
-            af_kwargs[key] = (float)(config['model'][key])
+    af_kwargs = json.loads(config['model']['af_kwargs'])
 
     # Settings for training
     learning_rate = float(config['train']['learning_rate'])
     optimizer_name = config['train']['optimizer_name']
-    train_ar = (bool)((int)(config['train']['train_ar']))
+    train_ar = config['train']['train_ar'] == 'True'
     acc_steps = int(config['train']['accumulation_steps'])
 
     # If restarting, reload params.
-    if (bool)((int)(config['train']['restart'])):
+    if config['train']['restart'] =='True':
         with open(config['train']['restart_path']+"results.pickle", 'rb') as fr:
             results = dill.load(fr)
         params_restart = results['params']
@@ -103,10 +114,19 @@ def main(config):
         params_restart = None
 
     # Train.
+    loss_save = []
     (params, h_signed, ar_func) = bear_net.train(
         data_train, num_kmers, epochs, ds_loc, alphabet, lag, make_ar_func, af_kwargs,
         learning_rate, optimizer_name, train_ar=train_ar, acc_steps=acc_steps,
-        params_restart=params_restart, writer=writer, dtype=dtype)
+        params_restart=params_restart, writer=writer, loss_save=loss_save, dtype=dtype)
+    
+    # plot training curve
+    plt.figure(figsize=[10, 10])
+    plt.xlabel("steps", fontsize=30)
+    plt.ylabel("loss", fontsize=30)
+    plt.plot(loss_save)
+    plt.tight_layout()
+    plt.savefig(os.path.join(out_folder, 'loss.png'), dpi=200)
 
     # Add learned h to results in config.
     config['results']['h'] = str(tf.math.exp(h_signed))
@@ -118,10 +138,10 @@ def main(config):
     with open(result_file, 'wb') as rw:
         dill.dump({'params': params}, rw)
 
-    if bool((int)(config['test']['test'])):
+    if config['test']['test'] == 'True':
         # Load settings for testing.
-        ds_loc_test = json.loads(config['data']['test_column'])
-        van_reg = float(config['test']['van_reg'])
+        ds_loc_test = int(config['data']['test_column'])
+        van_reg = np.array(json.loads(config['test']['van_reg']))
 
         (ll_ear, ll_ar, ll_van, perp_ear, perp_ar, perp_van,
          acc_ear, acc_ar, acc_van) = bear_net.evaluation(
@@ -140,6 +160,32 @@ def main(config):
         config['results']['heldout_accuracy_BMM'] = str(acc_van.numpy())
         with open(os.path.join(out_folder, 'config.cfg'), 'w') as cw:
             config.write(cw)
+            
+    if config['test']['train_test']=='True':
+        ds_loc_train = -1
+        ds_loc_test = ds_loc
+        van_reg = np.array(json.loads(config['test']['van_reg']))
+
+        (ll_ear, ll_ar, ll_van, perp_ear, perp_ar, perp_van,
+         acc_ear, acc_ar, acc_van) = bear_net.evaluation(
+            data, ds_loc_train, ds_loc_test, alphabet,
+            tf.math.exp(h_signed), ar_func, van_reg)
+
+        # Save config.
+        config['results']['perplex_BEAR'] = str(perp_ear.numpy())
+        config['results']['perplex_AR'] = str(perp_ar.numpy())
+        config['results']['perplex_BMM'] = str(perp_van.numpy())
+        config['results']['loglikelihood_BEAR'] = str(ll_ear.numpy())
+        config['results']['loglikelihood_AR'] = str(ll_ar.numpy())
+        config['results']['loglikelihood_BMM'] = str(ll_van.numpy())
+        config['results']['accuracy_BEAR'] = str(acc_ear.numpy())
+        config['results']['accuracy_AR'] = str(acc_ar.numpy())
+        config['results']['accuracy_BMM'] = str(acc_van.numpy())
+        with open(os.path.join(out_folder, 'config.cfg'), 'w') as cw:
+            config.write(cw)
+            
+        # Return liks for testing
+        return 1, ll_van.numpy(), perp_van.numpy()
 
     return 1
 
