@@ -129,7 +129,7 @@ def main(config):
     plt.savefig(os.path.join(out_folder, 'loss.png'), dpi=200)
 
     # Add learned h to results in config.
-    config['results']['h'] = str(tf.math.exp(h_signed))
+    config['results']['h'] = str(tf.math.exp(h_signed).numpy())
     with open(os.path.join(out_folder, 'config.cfg'), 'w') as cw:
         config.write(cw)
 
@@ -151,13 +151,13 @@ def main(config):
         # Save config.
         config['results']['heldout_perplex_BEAR'] = str(perp_ear.numpy())
         config['results']['heldout_perplex_AR'] = str(perp_ar.numpy())
-        config['results']['heldout_perplex_BMM'] = str(perp_van.numpy())
+        config['results']['heldout_perplex_BMM'] = json.dumps(perp_van.numpy().tolist())
         config['results']['heldout_loglikelihood_BEAR'] = str(ll_ear.numpy())
         config['results']['heldout_loglikelihood_AR'] = str(ll_ar.numpy())
-        config['results']['heldout_loglikelihood_BMM'] = str(ll_van.numpy())
+        config['results']['heldout_loglikelihood_BMM'] = json.dumps(ll_van.numpy().tolist())
         config['results']['heldout_accuracy_BEAR'] = str(acc_ear.numpy())
         config['results']['heldout_accuracy_AR'] = str(acc_ar.numpy())
-        config['results']['heldout_accuracy_BMM'] = str(acc_van.numpy())
+        config['results']['heldout_accuracy_BMM'] = json.dumps(acc_van.numpy().tolist())
         with open(os.path.join(out_folder, 'config.cfg'), 'w') as cw:
             config.write(cw)
             
@@ -174,13 +174,13 @@ def main(config):
         # Save config.
         config['results']['perplex_BEAR'] = str(perp_ear.numpy())
         config['results']['perplex_AR'] = str(perp_ar.numpy())
-        config['results']['perplex_BMM'] = str(perp_van.numpy())
+        config['results']['perplex_BMM'] = json.dumps(perp_van.numpy().tolist())
         config['results']['loglikelihood_BEAR'] = str(ll_ear.numpy())
         config['results']['loglikelihood_AR'] = str(ll_ar.numpy())
-        config['results']['loglikelihood_BMM'] = str(ll_van.numpy())
+        config['results']['loglikelihood_BMM'] = json.dumps(ll_van.numpy().tolist())
         config['results']['accuracy_BEAR'] = str(acc_ear.numpy())
         config['results']['accuracy_AR'] = str(acc_ar.numpy())
-        config['results']['accuracy_BMM'] = str(acc_van.numpy())
+        config['results']['accuracy_BMM'] = json.dumps(acc_van.numpy().tolist())
         with open(os.path.join(out_folder, 'config.cfg'), 'w') as cw:
             config.write(cw)
             
