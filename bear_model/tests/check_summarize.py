@@ -1,5 +1,6 @@
 from bear_model import summarize
 
+from Bio import Seq
 import argparse
 from collections import defaultdict
 import csv
@@ -47,14 +48,20 @@ def extract_input_counts(args):
             for si, elem in enumerate(summarize.load_input(
                                 open(indiv_file, 'r'), file_type)):
                 seq = elem[1]
-                if args.r:
-                    seq = seq[::-1]
                 full_seq = '['*lag + seq + ']'
                 for j in range(lag, len(full_seq)):
                     lag_kmer = full_seq[(j-lag):j]
                     next_letter = full_seq[j]
                     kmer_counts[li][lag_kmer][group][
                             alphabet[next_letter]] += 1
+                if args.r:
+                    seq = Seq.reverse_complement(seq)
+                    full_seq = '['*lag + seq + ']'
+                    for j in range(lag, len(full_seq)):
+                        lag_kmer = full_seq[(j-lag):j]
+                        next_letter = full_seq[j]
+                        kmer_counts[li][lag_kmer][group][
+                                alphabet[next_letter]] += 1
     return kmer_counts
 
 

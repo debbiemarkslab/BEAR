@@ -1,6 +1,7 @@
 from bear_model import summarize
 from bear_model.tests import check_summarize
 
+from Bio import Seq
 from collections import defaultdict
 import csv
 import json
@@ -40,7 +41,7 @@ def setup_args():
     out_prefix = os.path.join(exdata_path, 'out/out')
     os.makedirs(os.path.join(exdata_path, 'out'), exist_ok=True)
     os.makedirs(os.path.join(exdata_path, 'tmp'), exist_ok=True)
-    args = Args(in_file_set, out_prefix, l=max_lag, mk=1,
+    args = Args(in_file_set, out_prefix, f=True, l=max_lag, mk=1,
                 mf=0.000002, p='', r=True, t=os.path.join(exdata_path, 'tmp/'))
     return args, max_lag, in_file_set, out_prefix
 
@@ -101,8 +102,10 @@ def test_main():
                     next_letter = full_seq[j]
                     kmer_counts[li][lag_kmer][groups[fi]][
                             alphabet[next_letter]] += 1
+                    kmer_counts_rev[li][lag_kmer][groups[fi]][
+                            alphabet[next_letter]] += 1
                 # Reverse.
-                full_seq = '['*lag + seqs[fi][si][::-1] + ']'
+                full_seq = '['*lag + Seq.reverse_complement(seqs[fi][si]) + ']'
                 for j in range(lag, len(full_seq)):
                     lag_kmer = full_seq[(j-lag):j]
                     next_letter = full_seq[j]
