@@ -20,11 +20,11 @@ out_prefix : str
 -l : int, default = 10
     The maximum lag (the truncation level).
     
--f : bool, default = True
-    Whether to count kmers of only the forward direction.
+-nf : bool
+    Do not count kmers in the forward direction.
     
--r : bool, default = False
-    Whether to include the reverse compliment of sequences when counting.
+-r : bool
+    Also run KMC including the reverse compliment of sequences when counting.
 
 -mk : float, default = 12
     Maximum amount of memory available, in gigabytes (corresponding to the
@@ -583,7 +583,7 @@ def main(args):
     store_args_r = args.r
     args.r = False
     n_bins = None
-    if args.f:
+    if not args.nf:
         n_bins = run(args)
     # Handle reverse case.
     n_bins_rev = None
@@ -611,8 +611,8 @@ if __name__ == '__main__':
     parser.add_argument('-p', default='',
                         help=('Path to folder with kmc scripts' +
                               ' (kmc and kmc_dump).'))
-    parser.add_argument('-f', action='store_true', default=True,
-                        help='Compute just forward direction.')
+    parser.add_argument('-nf', action='store_true', default=False,
+                        help='Do not compute the forward direction.')
     parser.add_argument('-r', action='store_true', default=False,
                         help='Compute reverse direction.')
     parser.add_argument('-t', default='tmp/',
