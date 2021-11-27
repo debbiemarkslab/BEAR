@@ -177,6 +177,8 @@ class Unit1i:
 
         # Close files.
         file_out['pre'].close()
+        if self.file_type != 'fq' or self.reverse:
+            file_out['full'].close()
         for li in range(self.lag):
             file_out['suf'][li].close()
 
