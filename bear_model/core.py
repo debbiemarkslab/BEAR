@@ -1,3 +1,4 @@
+import numpy as np
 import tensorflow.compat.v2 as tf
 from tensorflow_probability.python.internal import reparameterization
 from tensorflow_probability import distributions as tfpd
@@ -142,8 +143,14 @@ alphabets_tf = {
     'prot': tf.convert_to_tensor(
         [b'A', b'R', b'N', b'D', b'C', b'E', b'Q', b'G', b'H', b'I', b'L',
          b'K', b'M', b'F', b'P', b'S', b'T', b'W', b'Y', b'V', b'[']),
-    'dna': tf.convert_to_tensor(['A', b'C', b'G', b'T', b'[']),
-    'rna': tf.convert_to_tensor(['A', b'C', b'G', b'U', b'['])}
+    'dna': tf.convert_to_tensor([b'A', b'C', b'G', b'T', b'[']),
+    'rna': tf.convert_to_tensor([b'A', b'C', b'G', b'U', b'['])}
+
+alphabets_en = {
+    'prot': np.array(['A', 'R', 'N', 'D', 'C', 'E', 'Q', 'G', 'H', 'I', 'L',
+             'K', 'M', 'F', 'P', 'S', 'T', 'W', 'Y', 'V', ']']),
+    'dna': np.array(['A', 'C', 'G', 'T', ']']),
+    'rna': np.array(['A', 'C', 'G', 'U', ']'])}
 
 
 @tf.function

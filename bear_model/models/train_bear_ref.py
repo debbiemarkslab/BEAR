@@ -19,6 +19,8 @@ import subprocess
 import datetime
 import numpy as np
 from matplotlib import pyplot as plt
+mpl.rcParams['agg.path.chunksize'] = 10000
+from bear_model import core
 from bear_model import dataloader
 from bear_model import ar_funcs
 from bear_model import bear_ref
@@ -96,6 +98,7 @@ def main(config):
     ds_loc = int(config['data']['train_column'])
     ds_loc_ref = int(config['data']['reference_column'])
     alphabet = config['data']['alphabet']
+    alphabet_size = len(core.alphabets_tf[alphabet]) - 1
     lag = int(config['hyperp']['lag'])
 
     make_ar_func = getattr(ar_funcs, 'make_ar_func_'+config['model']['ar_func_name'])
@@ -109,27 +112,32 @@ def main(config):
 
     # If restarting, reload params.
     if config['train']['restart'] == 'True':
-        with open(config['train']['restart_path']+"results.pickle", 'rb') as fr:
+        with open(os.path.join(config['train']['restart_path'], "results.pickle"), 'rb') as fr:
             results = dill.load(fr)
         params_restart = results['params']
     else:
         params_restart = None
 
     # Train.
-    loss_save = []
-    (params, h_signed, ar_func) = bear_ref.train(
-        data_train, num_kmers, epochs, ds_loc, ds_loc_ref, alphabet, lag, make_ar_func, af_kwargs,
-        learning_rate, optimizer_name, train_ar=train_ar, acc_steps=acc_steps,
-        params_restart=params_restart, writer=writer, loss_save=loss_save, dtype=dtype)
-    
-    # plot training curve
-    plt.figure(figsize=[10, 10])
-    plt.xlabel("steps", fontsize=30)
-    plt.ylabel("loss", fontsize=30)
-    plt.plot(loss_save)
-    plt.tight_layout()
-    plt.savefig(os.path.join(out_folder, 'loss.png'), dpi=200)
+    if config['train']['train'] =='True':
+        loss_save = []
+        (params, h_signed, ar_func) = bear_ref.train(
+            data_train, num_kmers, epochs, ds_loc, ds_loc_ref, alphabet, lag, make_ar_func, af_kwargs,
+            learning_rate, optimizer_name, train_ar=train_ar, acc_steps=acc_steps,
+            params_restart=params_restart, writer=writer, loss_save=loss_save, dtype=dtype)
 
+        # plot training curve
+        plt.figure(figsize=[10, 10])
+        plt.xlabel("steps", fontsize=30)
+        plt.ylabel("loss", fontsize=30)
+        plt.plot(loss_save)
+        plt.tight_layout()
+        plt.savefig(os.path.join(out_folder, 'loss.png'), dpi=200)
+    else:
+        assert config['train']['restart'] == 'True'
+        (params, h_signed, ar_func) = bear_ref.change_scope_params(
+            lag, alphabet_size, make_ar_func, af_kwargs, params_restart, dtype=dtype)
+        
     # Add learned h to results in config.
     config['results']['h'] = str(tf.math.exp(h_signed).numpy())
     tau = tf.math.exp(params[1])
@@ -138,7 +146,7 @@ def main(config):
     config['results']['stop_rate'] = str(1/((nw/(1+nw)).numpy()))
     with open(os.path.join(out_folder, 'config.cfg'), 'w') as cw:
         config.write(cw)
-
+        
     # Save results.
     result_file = os.path.join(out_folder, 'results.pickle')
     with open(result_file, 'wb') as rw:

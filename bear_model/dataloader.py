@@ -78,7 +78,7 @@ def sparse_dataloader(file, alphabet, batch_size, num_ds,
         One element of the data is a list of batch_size kmers and a counts tensor of shape
         [batch_size, num_ds, alphabet_size+1].
     """
-    alphabet_size = len(core.alphabets_en[alphabet]) - 1
+    alphabet_size = len(core.alphabets_tf[alphabet]) - 1
     data = tf.data.experimental.CsvDataset(file, [tf.string, tf.string, tf.string], header=header, field_delim=';')
     data = data.batch(batch_size)
     def map_(kmer, pre_string_pos, pre_string_count):
