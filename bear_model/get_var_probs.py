@@ -3,8 +3,13 @@ import pandas as pd
 import tensorflow.compat.v2 as tf
 import tensorflow_probability as tfp
 import dill
+import json
+import os
+import configparser
 from . import bear_net
+from . import ar_funcs
 from . import core
+from . import dataloader
 
 epsilon = tf.keras.backend.epsilon()
 
@@ -20,13 +25,37 @@ def _cross_str_arrays(array1, array2, exch='X'):
     cross = np.char.join(array1[:, None], x_array2[None, :]).flatten()
     return np.char.lstrip(cross, exch)
 
-def _load_bear(config, path):
+def load_ds(files_path, start_token, kmer_batch_size, sparse,
+            alphabet, num_ds, dtype=tf.float64):
+    files = [os.path.join(files_path, file) for file in os.listdir(files_path)
+                     if file.startswith(start_token)]
+    if sparse:
+        dataload_func = dataloader.sparse_dataloader
+    else:
+        dataload_func = dataloader.dataloader
+    if len(files) == 1:
+        data = dataload_func(files[0], alphabet,
+                             kmer_batch_size, num_ds,
+                             cache=False,
+                             dtype=dtype)
+    else:
+        # Interleave loaded data from multiple files.
+        data = tf.data.Dataset.from_tensor_slices(files)
+        data = data.interleave(
+            lambda x: dataload_func(x, alphabet,
+                                    kmer_batch_size, num_ds,
+                                    cache=False,
+                                    dtype=dtype),
+            cycle_length=4, num_parallel_calls=4, deterministic=False)
+    return data
+
+def load_bear(path):
     config = configparser.ConfigParser()
     config.read(path + '/config.cfg')
 
     dtype = getattr(tf, config['general']['precision'])
     lag = int(config['hyperp']['lag'])
-    config['data']['alphabet']
+    alphabet = config['data']['alphabet']
     alphabet_size = len(core.alphabets_tf[alphabet]) - 1
     make_ar_func = getattr(ar_funcs, 'make_ar_func_'+config['model']['ar_func_name'])
     af_kwargs = json.loads(config['model']['af_kwargs'])
@@ -36,7 +65,11 @@ def _load_bear(config, path):
     (params, h_signed, ar_func) = bear_net.change_scope_params(
             lag, alphabet_size, make_ar_func, af_kwargs, params_restart, dtype=dtype)
     h = np.exp(h_signed.numpy())
-    return lag, alphabet, h, decoder
+    
+    data = load_ds(config['data']['files_path'], config['data']['start_token'], int(config['train']['batch_size']),
+                   config['data']['sparse'] == 'True', alphabet, int(config['data']['num_ds']))
+    
+    return lag, alphabet, h, ar_func, data
 
 def _get_all_kmers(vars_, wt_seq, lag):
     """Get all kmers relevant to the calculation of variant probabilities wihtout repeats.
@@ -65,7 +98,7 @@ def _get_all_kmers(vars_, wt_seq, lag):
     return np.array(list(set(all_kmers))).astype(str)
 
 
-def _get_pdf(kmers, counts, h, decoder, mc_samples, vans, train_col, alphabet, get_map):
+def _get_pdf(kmers, counts, h, ar_func, mc_samples, vans, train_col, alphabet, get_map):
     """Get probabilities of all k+1-mer transitions.
     
     Parameters
@@ -73,7 +106,7 @@ def _get_pdf(kmers, counts, h, decoder, mc_samples, vans, train_col, alphabet, g
     kmers : tf tensor of str
     counts : tf tensor
     h : float
-    decoder : function
+    ar_func : function
     mc_samples : int
     vans : numpy array of floats
     train_col : int
@@ -92,17 +125,22 @@ def _get_pdf(kmers, counts, h, decoder, mc_samples, vans, train_col, alphabet, g
     # get all k+1-mers
     kp1mers = _cross_str_arrays(kmers, core.alphabets_en[alphabet], exch='X')
     
-    # get the decoder values on all kmers
+    # get the ar_func values on all kmers
     num_models = len(vans)
-    alpha = np.array(vans)[:, None, None]*tf.ones([len(kmers), alphabet_size], dtype=tf.float64)[None, ...]
-    if h != None:
-        num_models += 1
-        dec_vals = (tf.nn.softmax(decoder(core.tf_one_hot(kmers, 'prot')))+epsilon)[None, :, 0, :]/h[:, None, None]
-        alpha = tf.concat([dec_vals, alpha], axis=0)
+    if len(vans) > 0:
+        alpha = np.array(vans)[:, None, None]*tf.ones([len(kmers), alphabet_size], dtype=tf.float64)[None, ...]
+    if ar_func != None:
+        num_models += len(h)
+        ar_vals = tf.nn.softmax(ar_func(core.tf_one_hot(kmers, 'prot')))+epsilon
+        dec_vals = ar_vals[None, :, :]/h[:, None, None]
+        if len(vans) > 0:
+            alpha = tf.concat([dec_vals, alpha], axis=0)
+        else:
+            alpha = dec_vals
     concs = alpha + counts[None, :, :]
-    if h != None and get_map:
+    if ar_func != None and get_map:
         num_models += 1
-        alpha = tf.concat([dec_vals[None, ...], concs], axis=0)
+        concs = tf.concat([ar_vals[None, ...], concs], axis=0)
     
     # sample probabilities for each k+1-mer
     if get_map:
@@ -134,16 +172,14 @@ def _add_kmer_probs(vars_, scores, wt_seq, pdf, lag, seen_kmers, mc_samples):
     return scores
 
 
-def get_bear_probs(bear_path, data, wt_seq, vars_, train_col,
-                   mc_samples=41, vans=[0.1, 1, 10], lag=None, alphabet=None, get_map=False, h=None):
+def get_bear_probs(bear_path, wt_seq, vars_, train_col,
+                   mc_samples=41, vans=[0.1, 1, 10], lag=None, alphabet=None, get_map=False, h=None, data=None):
     """Sample posterior predictive probabilities of variants under BEAR by looping through batches of kmers.
     
     Parameters
     ----------
     bear_path : str
         None if using BMM and lag is specified.
-    data : tf dataset
-        generator of kmers and counts.
     wt_seq : str
         Must not be bytes!
     vars_ : numpy array of str
@@ -162,6 +198,8 @@ def get_bear_probs(bear_path, data, wt_seq, vars_, train_col,
         Gets the MAP
     h : numpy array
         For h scans if bear_folder is specified. None if using fit bear h.
+    data : tf dataset
+        Specify if not using BEAR. Generator of kmers and counts.
         
     Returns
     -------
@@ -170,14 +208,14 @@ def get_bear_probs(bear_path, data, wt_seq, vars_, train_col,
     """        
     # load bear from bear_path
     if bear_path != None:
-        lag, alphabet, h_bear, decoder = load_bear(bear_path)
-        if h == None:
+        lag, alphabet, h_bear, ar_func, data = load_bear(bear_path)
+        if h is None:
             h = np.array([h_bear])
         len_h = len(h)
     else:
-        assert lag != None and alphabet != None
+        assert (lag != None and alphabet != None) and (data != None and len(vans) > 0)
         len_h = 0
-        decoder = None
+        ar_func = None
 
     # pad wt_seq from pname
     wt_seq = lag*'['+wt_seq+']'
@@ -189,16 +227,13 @@ def get_bear_probs(bear_path, data, wt_seq, vars_, train_col,
     # no sampling if just using the MAP
     if get_map:
         mc_samples = 1
-        h = np.array([1.])
-        len_h = 1
-    num_models = (len(h)!=0)*(len_h + get_map) + len(vans)
+    num_models = (ar_func is not None)*(len_h + get_map) + len(vans)
 
     scores = np.zeros([len(vars_), num_models, mc_samples])
     seen_all_kmers = np.zeros(len(all_kmers))  
     
     for kmers, counts in iter(data):
         kmers = kmers.numpy().astype(str)
-        print(kmers)
         # first throw out kmers in the batch that can't contribute to the variant scores
         in_kmers = np.isin(kmers, all_kmers)
         print("num seen kmers in this batch:", np.sum(in_kmers))
@@ -208,7 +243,7 @@ def get_bear_probs(bear_path, data, wt_seq, vars_, train_col,
         seen_all_kmers += np.isin(all_kmers, seen_kmers)
         if np.sum(in_kmers)>0:
             # get probabilities of all transitions out of each kmer
-            pdf = _get_pdf(seen_kmers, seen_counts, h, decoder, mc_samples, vans, train_col, alphabet, get_map)
+            pdf = _get_pdf(seen_kmers, seen_counts, h, ar_func, mc_samples, vans, train_col, alphabet, get_map)
             # goes through all mutants and add the probabilities contributed by this batch of kmers
             scores = _add_kmer_probs(vars_, scores, wt_seq, pdf, lag, seen_kmers, mc_samples)
 
@@ -218,7 +253,7 @@ def get_bear_probs(bear_path, data, wt_seq, vars_, train_col,
     if sum(unseen_kmers)>0:
         pdf = _get_pdf(all_kmers[unseen_kmers],
                        tf.zeros([sum(unseen_kmers), train_col+1, 20+1], dtype=tf.float64),
-                       h, decoder, mc_samples, vans, train_col, alphabet, get_map)
+                       h, ar_func, mc_samples, vans, train_col, alphabet, get_map)
         scores = _add_kmer_probs(vars_, scores, wt_seq, pdf, lag, all_kmers[unseen_kmers].astype(str),
                                  mc_samples)
     if get_map:

@@ -340,7 +340,7 @@ def _evaluation_step(batch, h, ar_func, van_reg, alphabet_size, use_train, dtype
                                      condition_trans_counts=van_condition)
         # Get likelihoods.
         log_likelihood_ear = tf.reduce_sum(
-            post_ear.counts_log_prob(transition_counts_test))
+            post_ear.counts_log_prob(transition_counts_test), axis=-1)
         log_likelihood_arm = tf.reduce_sum(
             post_arm.counts_log_prob(transition_counts_test))
         log_likelihood_van = tf.reduce_sum(
@@ -359,7 +359,8 @@ def _evaluation_step(batch, h, ar_func, van_reg, alphabet_size, use_train, dtype
                                           tf.range(alphabet_size+1, dtype=dtype)),
                             dtype=dtype)
         
-        correct_ear = tf.math.reduce_sum(transition_counts_test*oh_ml_ear)
+        correct_ear = tf.math.reduce_sum(tf.math.reduce_sum(
+            transition_counts_test*oh_ml_ear, axis=-1), axis=-1)
         correct_arm = tf.math.reduce_sum(transition_counts_test*oh_ml_arm)
         correct_van = tf.math.reduce_sum(tf.math.reduce_sum(
             transition_counts_test[:, None, :]*oh_ml_van, axis=0), axis=-1)
@@ -460,3 +461,71 @@ def evaluation(data, ds_loc_train, ds_loc_test,
             tf.exp(-log_likelihood_arm/total_len),
             tf.exp(-log_likelihood_van/total_len),
             correct_ear/total_len, correct_arm/total_len, correct_van/total_len)
+
+def h_scan(data, ds_loc_train, ds_loc_test,
+           alphabet, h, ar_func, dtype=tf.float64):
+    """Evaluate a trained BEAR, AR or vanilla BEAR model. Can use multiple GPUs in parallel.
+
+    Parameters
+    ----------
+    data : tensorflow data object
+        Load sequence data using tools in dataloader.py. Minibatch before passing.
+    ds_loc_train : int
+        Column in count data that corresponds with the training data.
+        Set to -1 for conditioning on training data.
+    ds_loc_test : int
+        Column in count data that corresponds with the testing data.
+    alphabet : str
+        One of 'dna', 'rna', 'prot'.
+    h : dtype
+        The :math:`h` parameter from the BEAR model.
+    ar_func : function
+        A function that takes a tensor of shape [A1, ..., An, lag, alphabet_size+1]
+        of dtype and returns a tensor of shape [A1, ..., An, alphabet_size+1] of dtype
+        of transition probabilities for each kmer. The autoregressive function.
+    dtype : dtype, default = tf.float64
+
+    Returns
+    -------
+    log_likelihood_ear, log_likelihood_arm, log_likelihood_van : float
+        Total log likelihood of the data with the model evaluated as a BEAR,
+        AR or vanilla BEAR model.
+    perplexity_ear, perplexity_arm, perplexity_van : float
+        Perplexity of the data with the model evaluated as a BEAR,
+        AR or vanilla BEAR model.
+    accuracy_ear, accuracy_arm, accuracy_van : float
+        Accuracy of the data with the model evaluated as a BEAR,
+        AR or vanilla BEAR model. Ties in maximum model probability are resolved randomly.
+    """
+    alphabet_size = len(core.alphabets_tf[alphabet]) - 1
+    van_reg = tf.ones(1, dtype=dtype)
+
+    strategy = tf.distribute.MirroredStrategy()
+    use_train = ds_loc_train >= 0
+    if use_train:
+        def map_(kmers, counts):
+            return (core.tf_one_hot(kmers, alphabet),
+                    tf.gather(counts, ds_loc_test, axis=1),
+                    tf.gather(counts, ds_loc_train, axis=1))
+    else:
+        def map_(kmers, counts):
+            return (core.tf_one_hot(kmers, alphabet),
+                    tf.gather(counts, ds_loc_test, axis=1))
+    data_iter = iter(strategy.experimental_distribute_dataset(data.map(map_).prefetch(10)))
+
+    log_likelihood_ear = tf.zeros(tf.shape(h), dtype=dtype)
+    correct_ear = tf.zeros(tf.shape(h), dtype=dtype)
+    total_len = tf.constant(0., dtype=dtype)
+    
+    for i, batch in enumerate(data_iter):
+        if i == 0:
+            len_ar_func_out = len(tf.shape(batch[1]))
+            hs = tf.reshape(h, tf.concat([tf.shape(h), tf.ones(len_ar_func_out, dtype=tf.int32)], axis=0))
+        (ll_ear, ll_arm, ll_van, cor_ear, cor_arm, cor_van, tot_lens
+        ) = _distributed_evaluation_step(
+            batch, hs, ar_func, van_reg, alphabet_size, use_train, strategy)
+        log_likelihood_ear += ll_ear
+        correct_ear += cor_ear
+        total_len += tot_lens
+
+    return (log_likelihood_ear, tf.exp(-log_likelihood_ear/total_len), correct_ear/total_len, )

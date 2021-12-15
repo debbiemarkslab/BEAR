@@ -193,7 +193,7 @@ def main(config):
         config['results']['accuracy_BMM'] = json.dumps(acc_van.numpy().tolist())
         with open(os.path.join(out_folder, 'config.cfg'), 'w') as cw:
             config.write(cw)
-            
+                        
         # Return liks for testing
         return 1, ll_van.numpy(), perp_van.numpy()
 

@@ -15,7 +15,7 @@ def test_mc_sampling():
     vans = np.array([0.1, 1, 10])
     
     # First by mc sampling
-    scores = get_var_probs.get_bear_probs(None, data, wt_seq, vars_, 0,
+    scores = get_var_probs.get_bear_probs(None, wt_seq, vars_, 0, data=data,
                                           mc_samples=200000, vans=vans, lag=3, alphabet='prot')
 
     def get_log_dir(seen, all_, van, num_samples=200000):
@@ -34,7 +34,7 @@ def test_mc_sampling():
     assert np.all(np.absolute(fraction_error) < 0.01)
     
     # Now by MAP
-    scores = get_var_probs.get_bear_probs(None, data, wt_seq, vars_, 0, get_map=True,
+    scores = get_var_probs.get_bear_probs(None, wt_seq, vars_, 0, data=data, get_map=True,
                                           vans=vans, lag=3, alphabet='prot')
     
     def get_quotient(seen, all_, van):
