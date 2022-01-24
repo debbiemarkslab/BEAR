@@ -261,36 +261,39 @@ def get_bear_probs(bear_path, wt_seq, vars_, train_col,
     Parameters
     ----------
     bear_path : str
-        None if using BMM.
+        Path to folder of trained BEAR model. None if using BMM.
     wt_seq : str
-        Must not be bytes!
+        Wild type sequence. Must not be bytes!
     vars_ : numpy array of str
+        List of SNPs.
         Of the format (wt_aa) (position in wt_seq without start symbols) (var_aa) without spaces or barckets.
+        For example ['A0T','C45G'].
         Must not be bytes!
     train_col : int
+        Row of counts data that includes the training data
     mc_samples : int, default = 41
-        Number of samples to take from the posterior predictive.
+        Number of samples to take from the posterior predictive of the mutation probabilities.
     vans : numpy array, default = [0.1, 1, 10]
         vanilla regularization to use for BMM models.
     get_map : bool
-        Gets the MAP
+        Gets the probability of the mutations under the MAP model under BEAR instead of sampling models from BEAR.
     lag : int, default = None
         Specify if not using BEAR.
     alphabet :str, default = None
         Specify if not using BEAR.
     h : numpy array
-        For h scans if bear_folder is specified. None if using fit bear h.
+        For h scans if bear_folder is specified. None if using fit BEAR h.
     data : tf dataset
-        Specify if not using BEAR. Generator of kmers and counts.
+        Generator of kmers and counts. Specify if not using BEAR.
     kmc_path : str
-        Specify if one wishes to use kmc to count kmers instead of cycling through whole dataset
+        Specify the path kmc files if one wishes to use kmc to count kmers instead of cycling through whole dataset.
     kmc_reverse : bool, default=False
         Whether to include counts of the reverse complement of kmers when counting using kmc.
         
     Returns
     -------
     scores : numpy array of floats
-        [num variants, num models (whather or not to use BEAR + len(vans)), mc_samples].
+        [num variants, num models ((1 for the AR model if using BEAR and get_MAP=True) + len(hs) + len(vans)), mc_samples].
     """            
     # load bear from bear_path
     if bear_path != None:
@@ -395,26 +398,27 @@ def get_bear_probs_seqs(bear_path, seqs, train_col,
     Parameters
     ----------
     bear_path : str
-        None if using BMM .
+        Path to folder of trained BEAR model. None if using BMM.
     seqs : list
-        Must not be bytes! List of sequences to get probabilities of.
+        List of sequences to get probabilities of. Must not be bytes!
     train_col : int
+        Row of counts data that includes the training data
     mc_samples : int, default = 41
-        Number of samples to take from the posterior predictive.
+        Number of samples to take from the posterior predictive of the mutation probabilities.
     vans : numpy array, default = [0.1, 1, 10]
         vanilla regularization to use for BMM models.
     get_map : bool
-        Gets the MAP
+        Gets the probability of the mutations under the MAP model under BEAR instead of sampling models from BEAR.
     lag : int, default = None
         Specify if not using BEAR.
     alphabet :str, default = None
         Specify if not using BEAR.
     h : numpy array
-        For h scans if bear_folder is specified. None if using fit bear h.
+        For h scans if bear_folder is specified. None if using fit BEAR h.
     data : tf dataset
-        Specify if not using BEAR. Generator of kmers and counts.
+        Generator of kmers and counts. Specify if not using BEAR.
     kmc_path : str
-        Specify if one wishes to use kmc to count kmers instead of cycling through whole dataset
+        Specify the path kmc files if one wishes to use kmc to count kmers instead of cycling through whole dataset.
     kmc_reverse : bool, default=False
         Whether to include counts of the reverse complement of kmers when counting using kmc.
     no_ends: bool, default=False

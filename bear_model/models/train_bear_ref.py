@@ -19,6 +19,7 @@ import subprocess
 import datetime
 import numpy as np
 from matplotlib import pyplot as plt
+import matplotlib as mpl
 mpl.rcParams['agg.path.chunksize'] = 10000
 from bear_model import core
 from bear_model import dataloader

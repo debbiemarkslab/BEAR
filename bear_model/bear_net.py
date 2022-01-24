@@ -386,7 +386,7 @@ def _distributed_evaluation_step(batch, h, ar_func, van_reg, alphabet_size, use_
 
 def evaluation(data, ds_loc_train, ds_loc_test,
                alphabet, h, ar_func, van_reg, dtype=tf.float64):
-    """Evaluate a trained BEAR, AR or vanilla BEAR model. Can use multiple GPUs in parallel.
+    """Evaluate a trained BEAR, AR or BMM model. Can use multiple GPUs in parallel.
 
     Parameters
     ----------
@@ -464,7 +464,7 @@ def evaluation(data, ds_loc_train, ds_loc_test,
 
 def h_scan(data, ds_loc_train, ds_loc_test,
            alphabet, h, ar_func, dtype=tf.float64):
-    """Evaluate a trained BEAR, AR or vanilla BEAR model. Can use multiple GPUs in parallel.
+    """Evaluate a trained BEAR model at multiple h values. Can use multiple GPUs in parallel.
 
     Parameters
     ----------
@@ -477,7 +477,7 @@ def h_scan(data, ds_loc_train, ds_loc_test,
         Column in count data that corresponds with the testing data.
     alphabet : str
         One of 'dna', 'rna', 'prot'.
-    h : dtype
+    h : tensor
         The :math:`h` parameter from the BEAR model.
     ar_func : function
         A function that takes a tensor of shape [A1, ..., An, lag, alphabet_size+1]

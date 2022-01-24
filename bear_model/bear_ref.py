@@ -452,7 +452,7 @@ def _distributed_evaluation_step(batch, h, ar_func, van_reg, alphabet_size, use_
 
 def evaluation(data, ds_loc_train, ds_loc_test, ds_loc_ref,
                alphabet, h, ar_func, van_reg, dtype=tf.float64):
-    """Evaluate a trained BEAR, AR or vanilla BEAR model. Can use multiple GPUs in parallel.
+    """Evaluate a trained BEAR, AR or BMM model. Can use multiple GPUs in parallel.
 
     Parameters
     ----------
