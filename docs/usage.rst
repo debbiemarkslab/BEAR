@@ -42,6 +42,10 @@ file of preprocessed kmer transition counts using the ``dataloader`` submodule:
 
 .. autofunction:: bear_model.dataloader.dataloader
 
+If the counts are in a sparse format one may use
+
+.. autofunction:: bear_model.dataloader.sparse_dataloader
+
 The loaded dataset can then be used to train an AR or BEAR model with the
 ``bear_net`` submodule:
 
@@ -50,6 +54,10 @@ The loaded dataset can then be used to train an AR or BEAR model with the
 One then may evaluate the performance of the trained model:
 
 .. autofunction:: bear_model.bear_net.evaluation
+
+One may also evaluate the performance of the trained BEAR model for mutiple values of the concentration parameter :math:`h`:
+
+.. autofunction:: bear_model.bear_net.h_scan
 
 To recover the concentration parameter/misspecification diagnostic :math:`h` and
 the learned autoregressive function
@@ -103,6 +111,19 @@ any additional parameters in :math:`g`.
 The functions :func:`bear_model.bear_ref.evaluate` and
 :func:`bear_model.bear_net.change_scope_params`  are analogous to the functions
 in ``bear_net`` with the same names.
+
+**********************************
+Getting probabilities of mutations
+**********************************
+Having trained a BEAR or BMM model using ``bear_net`` (``bear_ref`` not yet supported) one can calculate the probability of new sequences or the probability of mutations to a wild type sequence.
+One can do this by sampling AR models from BEAR and calculating probabilities ffor each of these AR models, or by simply calculating the probabilities under the MAP model under a BEAR or BMM model.
+One may calculaate the probability fo given sequences:
+
+.. autofunction:: bear_model.get_var_probs.get_bear_probs_seqs
+
+or a list of mutations of a wild type sequence:
+
+.. autofunction:: bear_model.get_var_probs.get_bear_probs
 
 ###################
 Example BEAR models

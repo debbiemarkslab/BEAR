@@ -8,7 +8,9 @@ recursive-exclude * *.py[co]
 recursive-include docs *.rst conf.py
 recursive-include bear_model *.py
 
+recursive-include bear_model/data/kmaps *
 include bear_model/data/ysd1_lag_5_file_0_preshuf.tsv
+include bear_model/data/ex_seqs_kmap_for_var_pred.csv
 include bear_model/models/train_bear_net.py
 include bear_model/models/train_bear_ref.py
 graft bear_model/models/config_files

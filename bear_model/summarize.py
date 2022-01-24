@@ -2,7 +2,7 @@
 Extract summary statistics (kmer count transitions) from large nucleotide
 datasets in order to train BEAR models. Usage:
 
-``python summarize.py file out_prefix [-l L] [-mk MK] [-mf MF] [-p P] [-t T]``
+``python summarize.py file out_prefix [-l L] [-r R] [-mk MK] [-mf MF] [-p P] [-t T]``
 
 Input
 -----
@@ -19,6 +19,15 @@ out_prefix : str
 
 -l : int, default = 10
     The maximum lag (the truncation level).
+    
+-nf : bool
+    Do not count kmers in the forward direction.
+    
+-r : bool
+    Also run KMC including the reverse compliment of sequences when counting.
+    
+-pr : bool
+    Do all lags for pre KMCs.
 
 -mk : float, default = 12
     Maximum amount of memory available, in gigabytes (corresponding to the
@@ -65,12 +74,13 @@ Each counts vector is in the order `A, C, G, T, $` where $ is the stop symbol.
 import argparse
 from Bio.SeqIO.QualityIO import FastqGeneralIterator
 from Bio.SeqIO.FastaIO import SimpleFastaParser
+from Bio import Seq
 from collections import defaultdict
 import csv
 from dataclasses import dataclass, field
 import datetime
 import heapq
-import math
+import numpy as np
 import multiprocessing
 import os
 import random
@@ -102,34 +112,74 @@ class Unit1i:
         self.out_prefix = args.out_prefix
         self.lag = args.l
         self.reverse = args.r
+        self.pr = args.pr
 
         # Set up file structure.
         self.file_out_names = {
-                'pre': '{}_{}_pre.fastq'.format(
-                                        self.out_prefix, self.file_num),
                 'suf': ['{}_{}_suf_{}.fastq'.format(
                             self.out_prefix, self.file_num, li+1)
                         for li in range(self.lag)]}
+        if self.pr:
+            self.file_out_names['pre'] = ['{}_{}_pre_{}.fastq'.format(
+                            self.out_prefix, self.file_num, li+1)
+                        for li in range(self.lag)]
+        else:
+            self.file_out_names['pre'] = '{}_{}_pre.fastq'.format(
+                self.out_prefix, self.file_num)
         if self.file_type == 'fq' and not self.reverse:
             self.file_out_names['full'] = self.file
         else:
             self.file_out_names['full'] = '{}_{}_full.fastq'.format(
                                     self.out_prefix, self.file_num)
         # Format for next stage.
-        self.output_units = (
-           [Unit1o(self.file_out_names['full'], 'fq', self.group, 'full',
-                   self.lag+1),
-            Unit1o(self.file_out_names['pre'], 'fq', self.group, 'pre',
-                   self.lag)]
-           + [Unit1o(self.file_out_names['suf'][li], 'fq', self.group, 'suf',
-                     li+1) for li in range(self.lag)])
+        
+        self.output_units = [Unit1o(self.file_out_names['full'], 'fq', self.group, 'full',
+                   self.lag+1)]
+        if self.pr:
+            self.output_units = (self.output_units
+                + [Unit1o(self.file_out_names['pre'][li], 'fq', self.group, 'pre', li+1) for li in range(self.lag)])
+        else:
+            self.output_units = (self.output_units 
+                + [Unit1o(self.file_out_names['pre'], 'fq', self.group, 'pre', self.lag)])
+        self.output_units = (self.output_units
+            + [Unit1o(self.file_out_names['suf'][li], 'fq', self.group, 'suf', li+1) for li in range(self.lag)])
 
+    def __write_out(self, file_out, not_init, name, seq):
+        # Write full, if not in fastq format already.
+        if self.file_type != 'fq' or self.reverse:
+            if not_init:
+                file_out['full'].write('\n')
+            file_out['full'].write('@{}\n{}\n+\n{}'.format(
+                name, seq, 'F'*len(seq)))
+        # Write prefix.
+        if self.pr:
+            for li in range(self.lag):
+                if not_init:
+                    file_out['pre'][li].write('\n')
+                file_out['pre'][li].write('@{}\n{}\n+\n{}'.format(
+                    name, seq[:li+1], 'F'*(li+1)))
+        else:
+            if not_init:
+                file_out['pre'].write('\n')
+            file_out['pre'].write('@{}\n{}\n+\n{}'.format(
+                    name, seq[:self.lag], 'F'*self.lag))
+        # Write suffixes.
+        for li in range(self.lag):
+            if not_init:
+                file_out['suf'][li].write('\n')
+            file_out['suf'][li].write('@{}\n{}\n+\n{}'.format(
+                name, seq[-(li+1):], 'F'*(li+1)))
+    
     def __call__(self):
 
         # Initialize output files.
-        file_out = {'pre': open(self.file_out_names['pre'], 'w'),
-                    'suf': [open(self.file_out_names['suf'][li], 'w')
+        file_out = {'suf': [open(self.file_out_names['suf'][li], 'w')
                             for li in range(self.lag)]}
+        if self.pr:
+            file_out['pre'] = [open(self.file_out_names['pre'][li], 'w')
+                               for li in range(self.lag)]
+        else:
+            file_out['pre'] = open(self.file_out_names['pre'], 'w')
         if self.file_type != 'fq' or self.reverse:
             file_out['full'] = open(self.file_out_names['full'], 'w')
 
@@ -139,29 +189,24 @@ class Unit1i:
         for j, elem in enumerate(load_input(in_file, self.file_type)):
             not_init = j > 0
             name, seq = elem[:2]
-            if self.reverse:
-                seq = seq[::-1]
 
-            # Write full, if not in fastq format already.
-            if self.file_type != 'fq' or self.reverse:
-                if not_init:
-                    file_out['full'].write('\n')
-                file_out['full'].write('@{}\n{}\n+\n{}'.format(
-                    name, seq, 'F'*len(seq)))
-            # Write prefix.
-            if not_init:
-                file_out['pre'].write('\n')
-            file_out['pre'].write('@{}\n{}\n+\n{}'.format(
-                    name, seq[:self.lag], 'F'*self.lag))
-            # Write suffixes.
-            for li in range(self.lag):
-                if not_init:
-                    file_out['suf'][li].write('\n')
-                file_out['suf'][li].write('@{}\n{}\n+\n{}'.format(
-                    name, seq[-(li+1):], 'F'*(li+1)))
+            self.__write_out(file_out, not_init, name, seq)
+                
+            if self.reverse:
+                not_init = True
+                seq = Seq.reverse_complement(seq)
+                name = name + '_rev'
+                
+                self.__write_out(file_out, not_init, name, seq)
 
         # Close files.
-        file_out['pre'].close()
+        if self.pr:
+            for li in range(self.lag):
+                file_out['pre'][li].close()
+        else:
+            file_out['pre'].close()
+        if self.file_type != 'fq' or self.reverse:
+            file_out['full'].close()
         for li in range(self.lag):
             file_out['suf'][li].close()
 
@@ -383,8 +428,8 @@ class PreConsolidate:
         self.lag = args.l
         self.queue = []
         for unit2i in unit2is:
-            out_file, group, seq_type, _ = unit2i.get_output_info()
-            if seq_type == 'pre':
+            out_file, group, seq_type, k = unit2i.get_output_info()
+            if seq_type == 'pre' and k == args.l:
                 self.load_onto_queue(open(out_file, 'r'), group)
 
         # Initialize registers and writers.
@@ -513,8 +558,8 @@ class Unit3i:
 def compute_n_bin_bits(total_size, n_groups, mf):
     """Compute number of output files per lag and bits needed to specify
     them."""
-    return max([math.ceil(math.log(total_size * n_groups /
-                                   (mf * 1e9)) / math.log(2)), 0])
+    return int(max([np.ceil(np.log(total_size * n_groups /
+                                   (mf * 1e9)) / np.log(2)), 0]))
 
 
 def stage3(unit2is, total_size, n_groups, args):
@@ -567,7 +612,9 @@ def main(args):
     # Standard direction first.
     store_args_r = args.r
     args.r = False
-    n_bins = run(args)
+    n_bins = None
+    if not args.nf:
+        n_bins = run(args)
     # Handle reverse case.
     n_bins_rev = None
     if store_args_r:
@@ -594,8 +641,12 @@ if __name__ == '__main__':
     parser.add_argument('-p', default='',
                         help=('Path to folder with kmc scripts' +
                               ' (kmc and kmc_dump).'))
+    parser.add_argument('-nf', action='store_true', default=False,
+                        help='Do not compute the forward direction.')
     parser.add_argument('-r', action='store_true', default=False,
-                        help='Compute reverse direction also.')
+                        help='Compute reverse direction.')
+    parser.add_argument('-pr', action='store_true', default=False,
+                        help='KMC shorter pres as well.')
     parser.add_argument('-t', default='tmp/',
                         help=('Temporary directory for use by KMC. '
                               + 'Defaults to tmp/'))

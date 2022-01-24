@@ -2,6 +2,7 @@ from bear_model import dataloader
 import tensorflow as tf
 import tensorflow_io as tfio
 import numpy as np
+from scipy.special import loggamma
 from pkg_resources import resource_filename
 
 
@@ -29,3 +30,20 @@ def test_dataloader():
     assert np.all(counts.numpy() == np.array(counts_real))
     assert counts.dtype == tf.float64
     assert len(list(data)) == 1365/3
+
+def test_bmm_liklihood_calculation():
+    # Check that dataloader.bmm_likelihood returns the correct values
+    f_name = resource_filename('bear_model', 'data/ysd1_lag_5_file_0_preshuf.tsv')
+    data = dataloader.dataloader(f_name, 'dna', 2000, 3)
+    kmers, counts = next(iter(data))
+    counts = counts.numpy()
+    assert len(counts) < 2000
+
+    alpha = np.array([0.1, 1., 10.])
+    true_liks = np.sum((np.sum(loggamma(counts[:, :, None, :]+alpha[:, None]), axis=-1)
+                        - loggamma(np.sum(counts[:, :, None, :]+alpha[:, None], axis=-1)))
+                       -(np.sum(loggamma(0*counts[:, :, None, :]+alpha[:, None]), axis=-1)
+                         - loggamma(np.sum(0*counts[:, :, None, :]+alpha[:, None], axis=-1))),
+                       axis = 0)
+    calc_liks = dataloader.bmm_likelihood(data.map(lambda kmers, counts: counts), alpha)
+    assert np.allclose(true_liks, calc_liks.numpy())

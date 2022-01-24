@@ -51,7 +51,7 @@ setup(
     include_package_data=True,
     package_data={
         'bear_model': [
-            'models/data/shuffled_virus_kmers_lag_5.tsv',
+            'models/data/',
             'models/',
             'models/train_bear_net.py',
             'models/train_bear_ref.py',
