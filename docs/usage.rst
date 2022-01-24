@@ -42,6 +42,10 @@ file of preprocessed kmer transition counts using the ``dataloader`` submodule:
 
 .. autofunction:: bear_model.dataloader.dataloader
 
+If the counts are in a sparse format one may use
+
+.. autofunction:: bear_model.dataloader.sparse_dataloader
+
 The loaded dataset can then be used to train an AR or BEAR model with the
 ``bear_net`` submodule:
 

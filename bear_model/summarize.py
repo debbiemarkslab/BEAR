@@ -112,13 +112,14 @@ class Unit1i:
         self.out_prefix = args.out_prefix
         self.lag = args.l
         self.reverse = args.r
+        self.pr = args.pr
 
         # Set up file structure.
         self.file_out_names = {
                 'suf': ['{}_{}_suf_{}.fastq'.format(
                             self.out_prefix, self.file_num, li+1)
                         for li in range(self.lag)]}
-        if args.pr:
+        if self.pr:
             self.file_out_names['pre'] = ['{}_{}_pre_{}.fastq'.format(
                             self.out_prefix, self.file_num, li+1)
                         for li in range(self.lag)]
@@ -134,7 +135,7 @@ class Unit1i:
         
         self.output_units = [Unit1o(self.file_out_names['full'], 'fq', self.group, 'full',
                    self.lag+1)]
-        if args.pr:
+        if self.pr:
             self.output_units = (self.output_units
                 + [Unit1o(self.file_out_names['pre'][li], 'fq', self.group, 'pre', li+1) for li in range(self.lag)])
         else:
@@ -151,7 +152,7 @@ class Unit1i:
             file_out['full'].write('@{}\n{}\n+\n{}'.format(
                 name, seq, 'F'*len(seq)))
         # Write prefix.
-        if args.pr:
+        if self.pr:
             for li in range(self.lag):
                 if not_init:
                     file_out['pre'][li].write('\n')
@@ -174,7 +175,7 @@ class Unit1i:
         # Initialize output files.
         file_out = {'suf': [open(self.file_out_names['suf'][li], 'w')
                             for li in range(self.lag)]}
-        if args.pr:
+        if self.pr:
             file_out['pre'] = [open(self.file_out_names['pre'][li], 'w')
                                for li in range(self.lag)]
         else:
@@ -199,7 +200,7 @@ class Unit1i:
                 self.__write_out(file_out, not_init, name, seq)
 
         # Close files.
-        if args.pr:
+        if self.pr:
             for li in range(self.lag):
                 file_out['pre'][li].close()
         else:
@@ -557,8 +558,8 @@ class Unit3i:
 def compute_n_bin_bits(total_size, n_groups, mf):
     """Compute number of output files per lag and bits needed to specify
     them."""
-    return max([np.ceil(np.log(total_size * n_groups /
-                                   (mf * 1e9)) / np.log(2)), 0])
+    return int(max([np.ceil(np.log(total_size * n_groups /
+                                   (mf * 1e9)) / np.log(2)), 0]))
 
 
 def stage3(unit2is, total_size, n_groups, args):

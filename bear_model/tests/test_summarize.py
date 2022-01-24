@@ -18,7 +18,7 @@ def setup_args():
     class Args:
 
         def __init__(self, file, out_prefix, nf=None, l=None, mk=None, mf=None,
-                     p=None, r=None, t=None, d1=None, d2=None, n=None,
+                     p=None, r=None, t=None, d1=None, d2=None, n=None, pr=None,
                      s3=False, s12=False, num=10):
             self.file = file
             self.out_prefix = out_prefix
@@ -32,6 +32,7 @@ def setup_args():
             self.d1 = False
             self.d2 = False
             self.n = n
+            self.pr = pr
             self.s12 = s12
             self.s3 = s3
             self.num = num
