@@ -87,6 +87,8 @@ target/
 # Output files and data
 bear_model/models/out_data
 **.tar.gz**
-bear_model/data
-!*/bear_model/data/kmaps/*
-!*/bear_model/data/ex_seqs_kmap_for_var_pred.csv
+bear_model/data/*
+!bear_model/data
+!bear_model/data/kmaps
+!bear_model/data/kmaps/ex_seqs_kmc_inter_0_*
+!bear_model/data/ex_seqs_kmap_for_var_pred.csv
