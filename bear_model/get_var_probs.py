@@ -6,7 +6,6 @@ import dill
 import json
 import os
 import configparser
-import py_kmc_api as kmc
 from . import bear_net
 from . import ar_funcs
 from . import core
@@ -169,6 +168,8 @@ def make_kmc_genome_counter(path, lag, reverse=True):
     counter : function
         Takes kmer strings and returns transition counts.
     """
+    import py_kmc_api as kmc
+    
     alphabet = core.alphabets_en['dna'][:-1]
     alphabet_size = len(alphabet)
     
