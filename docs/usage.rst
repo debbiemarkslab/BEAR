@@ -115,7 +115,7 @@ in ``bear_net`` with the same names.
 **********************************
 Getting probabilities of mutations
 **********************************
-Having trained a BEAR or BMM model using ``bear_net`` (``bear_ref`` not yet supported) one can calculate the probability of new sequences or the probability of mutations to a wild type sequence.
+Having trained a BEAR or BMM model using ``bear_net`` (``bear_ref`` not yet supported) one can calculate the probability of new sequences or the probability of mutations to a wild type sequence using the ``get_var_probs`` submodule:.
 One can do this by sampling AR models from BEAR and calculating probabilities ffor each of these AR models, or by simply calculating the probabilities under the MAP model under a BEAR or BMM model.
 One may calculaate the probability fo given sequences:
 

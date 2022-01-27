@@ -45,9 +45,10 @@ setup(
     packages=find_packages(exclude=['docs']),
     entry_points={
         'console_scripts': [
-            # 'command = some.module:some_function',
+            #,
         ],
     },
+    scripts=['bear_model/summarize.py'],
     include_package_data=True,
     package_data={
         'bear_model': [

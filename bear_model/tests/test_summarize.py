@@ -13,12 +13,12 @@ from pkg_resources import resource_filename
 exdata_path = resource_filename('bear_model', 'tests/exdata')
 
 
-def setup_args():
+def setup_args(pr=None):
     # --- Run preprocess code. ---
     class Args:
 
         def __init__(self, file, out_prefix, nf=None, l=None, mk=None, mf=None,
-                     p=None, r=None, t=None, d1=None, d2=None, n=None, pr=None,
+                     p=None, r=None, t=None, d1=None, d2=None, n=None, pr=pr,
                      s3=False, s12=False, num=10):
             self.file = file
             self.out_prefix = out_prefix
@@ -42,8 +42,8 @@ def setup_args():
     out_prefix = os.path.join(exdata_path, 'out/out')
     os.makedirs(os.path.join(exdata_path, 'out'), exist_ok=True)
     os.makedirs(os.path.join(exdata_path, 'tmp'), exist_ok=True)
-    args = Args(in_file_set, out_prefix, nf=False, l=max_lag, mk=1,
-                mf=0.000002, p='', r=True, t=os.path.join(exdata_path, 'tmp/'))
+    args = Args(in_file_set, out_prefix, nf=False, l=max_lag, mk=2,
+                mf=2, p='', r=True, t=os.path.join(exdata_path, 'tmp/'))
     return args, max_lag, in_file_set, out_prefix
 
 
@@ -142,6 +142,7 @@ def test_main():
         for lag_kmer in lag_kmers:
             assert lag_kmer in kmer_counts[li]
             assert lag_kmer in kmer_counts_check[li]
+            print(lag_kmer)
             for gi in range(n_groups):
                 for j in range(len(alphabet)):
                     assert (kmer_counts[li][lag_kmer][gi][j] ==
@@ -161,4 +162,7 @@ def test_main():
 def test_check():
     # --- Compare using large scale check. ---
     args, *_ = setup_args()
+    check_summarize.main(args)
+    
+    args, *_ = setup_args(pr=True)
     check_summarize.main(args)
