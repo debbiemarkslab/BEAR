@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 """
 Extract summary statistics (kmer count transitions) from large nucleotide
 datasets in order to train BEAR models. Usage:
@@ -27,7 +29,7 @@ out_prefix : str
     Also run KMC including the reverse compliment of sequences when counting.
     
 -pr : bool
-    Do all lags for pre KMCs.
+    Do all lags for pre and full KMCs.
 
 -mk : float, default = 12
     Maximum amount of memory available, in gigabytes (corresponding to the
@@ -132,14 +134,13 @@ class Unit1i:
             self.file_out_names['full'] = '{}_{}_full.fastq'.format(
                                     self.out_prefix, self.file_num)
         # Format for next stage.
-        
-        self.output_units = [Unit1o(self.file_out_names['full'], 'fq', self.group, 'full',
-                   self.lag+1)]
         if self.pr:
-            self.output_units = (self.output_units
+            self.output_units = (
+                [Unit1o(self.file_out_names['full'], 'fq', self.group, 'full', li+1) for li in range(self.lag + 1)]
                 + [Unit1o(self.file_out_names['pre'][li], 'fq', self.group, 'pre', li+1) for li in range(self.lag)])
         else:
-            self.output_units = (self.output_units 
+            self.output_units = (
+                [Unit1o(self.file_out_names['full'], 'fq', self.group, 'full', self.lag+1)]
                 + [Unit1o(self.file_out_names['pre'], 'fq', self.group, 'pre', self.lag)])
         self.output_units = (self.output_units
             + [Unit1o(self.file_out_names['suf'][li], 'fq', self.group, 'suf', li+1) for li in range(self.lag)])
@@ -483,7 +484,8 @@ class Consolidate:
         self.init_queue = []
         for unit2i in unit2is:
             out_file, group, seq_type, k = unit2i.get_output_info()
-            if seq_type != 'pre' and not (seq_type == 'suf' and k < lag):
+            if (seq_type == 'suf' and k >= lag) or (seq_type == 'full' and k == args.l + 1):
+                print(out_file, seq_type, k, lag)
                 self.init_queue.append((out_file, group, seq_type))
 
         # Initialize register and writers.

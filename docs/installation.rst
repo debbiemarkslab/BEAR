@@ -17,5 +17,9 @@ on Mac/Linux.
 
 .. _KMC: https://github.com/refresh-bio/KMC/releases
 
+To access our preprocessing script ``summarize.py``, add the bear_model folder to the path and give permissions to summarize.py::
+
+    export PATH=$PATH:bear_model	
+
 To test your installation, run ``pytest`` in the project directory.
 All tests should pass.
