@@ -485,7 +485,6 @@ class Consolidate:
         for unit2i in unit2is:
             out_file, group, seq_type, k = unit2i.get_output_info()
             if (seq_type == 'suf' and k >= lag) or (seq_type == 'full' and k == args.l + 1):
-                print(out_file, seq_type, k, lag)
                 self.init_queue.append((out_file, group, seq_type))
 
         # Initialize register and writers.
