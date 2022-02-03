@@ -6,6 +6,7 @@ import dill
 import json
 import os
 import configparser
+from Bio import Seq
 from . import bear_net
 from . import ar_funcs
 from . import core
@@ -13,7 +14,7 @@ from . import dataloader
 
 epsilon = tf.keras.backend.epsilon()
 
-def _cross_str_arrays(array1, array2, exch='X'):
+def cross_str_arrays(array1, array2, exch='X'):
     """Get cross product of two string arrays.
     
     Parameters
@@ -71,8 +72,14 @@ def load_bear(path):
     
     return lag, alphabet, h, ar_func, data
 
-
-def _get_pdf(kmers, counts, h, ar_func, mc_samples, vans, train_col, alphabet, get_map):
+def df_to_func(df, num_models, mc_samples, summed=True):
+    if summed:
+        prob_func = lambda kp1mers_ex: np.sum(df.loc[kp1mers_ex].to_numpy().reshape([-1, num_models, mc_samples]), axis=0)
+    else:
+        prob_func = lambda kp1mers_ex: df.loc[kp1mers_ex].to_numpy().reshape([-1, num_models, mc_samples])
+    return prob_func
+    
+def get_pdf(kmers, counts, h, ar_func, mc_samples, vans, train_col, alphabet, get_map, summed=True, get_df=False):
     """Get probabilities of all k+1-mer transitions. Uses a dataframe indexed by k+1-mers
     and with sampled transition probabilities as each of the columns. One can pass a k+1-mer
     to df to get the transition probability samples from each model.
@@ -87,6 +94,11 @@ def _get_pdf(kmers, counts, h, ar_func, mc_samples, vans, train_col, alphabet, g
     vans : numpy array of floats
     train_col : int
     alphabet : str
+    summed : bool, default=True
+        Whether prob func should sum the probabilities of all kp1-mer transitions (True)
+        or return the matrix of probabilities with first dimension kmp1-mers (False)
+    get_df : bool, default=False
+        Whether to return the df instead of the pdf.
     
     Returns
     -------
@@ -100,7 +112,7 @@ def _get_pdf(kmers, counts, h, ar_func, mc_samples, vans, train_col, alphabet, g
     # take only the counts from the training column
     counts = counts[:, train_col, :]
     # get all k+1-mers
-    kp1mers = _cross_str_arrays(kmers, core.alphabets_en[alphabet], exch='X')
+    kp1mers = cross_str_arrays(kmers, core.alphabets_en[alphabet], exch='X')
     
     # get the ar_func values on all kmers
     num_models = len(vans)
@@ -134,7 +146,13 @@ def _get_pdf(kmers, counts, h, ar_func, mc_samples, vans, train_col, alphabet, g
     for i in range(num_models):
         pd_dict['prob_{}'.format(i)] = log_probs[:, i, :].T
     df = pd.concat([pd.DataFrame(v) for k, v in pd_dict.items()], axis=1, keys=pd_dict.keys()).set_index(('kmer', 0))
-    prob_func = lambda kp1mers_ex: np.sum(df.loc[kp1mers_ex].to_numpy().reshape([-1, num_models, mc_samples]), axis=0)
+
+    if get_df:
+        prob_func = df
+        # drop the names of the columns
+        prob_func.columns = np.arange(len(prob_func.columns))
+    else:
+        prob_func = df_to_func(df, num_models, mc_samples, summed=summed)
     return prob_func
 
 def get_kmc_count(kmer, kmc_file, kmer_token, c):
@@ -151,7 +169,7 @@ def load_kmc(path):
     print("loaded", path)
     return file
 
-def make_kmc_genome_counter(path, lag, reverse=True):
+def make_kmc_genome_counter(path, lag, reverse=True, no_end=False):
     """ Get a function that takes a batch of kmers and returns transition counts.
     End symbol is 0 because ends in assemblies aren't reliable.
     
@@ -162,52 +180,74 @@ def make_kmc_genome_counter(path, lag, reverse=True):
     lag : int
     reverse : bool, default=True
         Whether to include counts of the reverse complement of kmers as well.
+    no_end : bool, default=False
+        Don't load kmc files for starts and ends and assume kmers don't end.
+        In this case you can enter the exact res file.
     
     Returns
     -------
     counter : function
         Takes kmer strings and returns transition counts.
     """
+    global kmc
     import py_kmc_api as kmc
     
     alphabet = core.alphabets_en['dna'][:-1]
     alphabet_size = len(alphabet)
     
-    # Load kmc file into memory
-    print("loading", path)
-    files = []
-    files_suf = []
-    for l in np.arange(lag) + 1:
-        files.append(load_kmc(path + '_kmc_inter_0_pre_{}.res'.format(l)))
-        files_suf.append(load_kmc(path + '_kmc_inter_0_suf_{}.res'.format(l)))
-    files.append(load_kmc(path + '_kmc_inter_0_full_{}.res'.format(lag+1)))
-    
     # create tokens for calling kmc
     kmer_token = kmc.KmerAPI(lag+1)
     c = kmc.Count()
     
-    def counter(kmers):
-        final_shape = np.r_[np.shape(kmers), [alphabet_size+1]]
-        counts = np.zeros([np.size(kmers), alphabet_size+1])
-        for i, k in enumerate(kmers.flatten()):
-            k = k.replace('[', '')
-            for j, b in enumerate(alphabet):
-                # Get kp1mer count
-                counts[i, j] = get_kmc_count(k + b, files[len(k)], kmer_token, c)
-                # Get reverse count (assemblies only look at one strand).
-                if reverse:
-                    if len(k) == lag:
+    if no_end:
+        # Load kmc file into memory
+        print("loading", path)
+        if '.res' not in path:
+            path = path + '_kmc_inter_0_full_{}.res'.format(lag+1)
+        file = load_kmc(path)
+        def counter(kmers):
+            final_shape = np.r_[np.shape(kmers), [alphabet_size+1]]
+            counts = np.zeros([np.size(kmers), alphabet_size+1])
+            for i, k in enumerate(kmers.flatten()):
+                for j, b in enumerate(alphabet):
+                    # Get kp1mer count
+                    counts[i, j] = get_kmc_count(k + b, file, kmer_token, c)
+                    # Get reverse count (assemblies only look at one strand).
+                    if reverse:
                         counts[i, j] += get_kmc_count(Seq.reverse_complement(k + b),
-                                                      files[len(k)], kmer_token, c)
-                    if len(k) < lag:
-                        counts[i, j] += get_kmc_count(Seq.reverse_complement(k + b),
-                                                      files_suf[len(k)], kmer_token, c)
-            if len(k) == lag:
-                counts[i, -1] = get_kmc_count(k, files_suf[len(k)-1], kmer_token, c)
-                if reverse:
-                    counts[i, -1] = get_kmc_count(Seq.reverse_complement(k),
-                                                  files_suf[len(k)-1], kmer_token, c)
-        return counts.reshape(final_shape)
+                                                      file, kmer_token, c)
+            return counts.reshape(final_shape)
+    else:
+        # Load kmc file into memory
+        print("loading", path)
+        files = []
+        files_suf = []
+        for l in np.arange(lag) + 1:
+            files.append(load_kmc(path + '_kmc_inter_0_pre_{}.res'.format(l)))
+            files_suf.append(load_kmc(path + '_kmc_inter_0_suf_{}.res'.format(l)))
+        files.append(load_kmc(path + '_kmc_inter_0_full_{}.res'.format(lag+1)))
+        def counter(kmers):
+            final_shape = np.r_[np.shape(kmers), [alphabet_size+1]]
+            counts = np.zeros([np.size(kmers), alphabet_size+1])
+            for i, k in enumerate(kmers.flatten()):
+                k = k.replace('[', '')
+                for j, b in enumerate(alphabet):
+                    # Get kp1mer count
+                    counts[i, j] = get_kmc_count(k + b, files[len(k)], kmer_token, c)
+                    # Get reverse count (assemblies only look at one strand).
+                    if reverse:
+                        if len(k) == lag:
+                            counts[i, j] += get_kmc_count(Seq.reverse_complement(k + b),
+                                                          files[len(k)], kmer_token, c)
+                        if len(k) < lag:
+                            counts[i, j] += get_kmc_count(Seq.reverse_complement(k + b),
+                                                          files_suf[len(k)], kmer_token, c)
+                if len(k) == lag:
+                    counts[i, -1] = get_kmc_count(k, files_suf[len(k)-1], kmer_token, c)
+                    if reverse:
+                        counts[i, -1] += get_kmc_count(Seq.reverse_complement(k),
+                                                       files[len(k)-1], kmer_token, c)
+            return counts.reshape(final_shape)
     return counter
 
 
@@ -329,9 +369,10 @@ def get_bear_probs(bear_path, wt_seq, vars_, train_col,
     if kmc_path is not None:
         counter = make_kmc_genome_counter(kmc_path, lag, reverse=kmc_reverse)
         all_counts = counter(all_kmers)[:, None, :]
+        print(all_kmers, all_counts)
         if np.all(all_counts == 0):
             print("no kmers found, are you sure you have the correct kmc file and lag?")
-        pdf = _get_pdf(all_kmers, all_counts, h, ar_func, mc_samples, vans, train_col, alphabet, get_map)
+        pdf = get_pdf(all_kmers, all_counts, h, ar_func, mc_samples, vans, train_col, alphabet, get_map)
         scores = _add_kmer_probs_vars(vars_, scores, wt_seq, pdf, lag, all_kmers)
     else:
         seen_all_kmers = np.zeros(len(all_kmers)) 
@@ -346,14 +387,14 @@ def get_bear_probs(bear_path, wt_seq, vars_, train_col,
             seen_all_kmers += np.isin(all_kmers, seen_kmers)
             if np.sum(in_kmers)>0:
                 # get probabilities of all transitions out of each kmer
-                pdf = _get_pdf(seen_kmers, seen_counts, h, ar_func, mc_samples, vans, train_col, alphabet, get_map)
+                pdf = get_pdf(seen_kmers, seen_counts, h, ar_func, mc_samples, vans, train_col, alphabet, get_map)
                 # goes through all mutants and add the probabilities contributed by this batch of kmers
                 scores = _add_kmer_probs_vars(vars_, scores, wt_seq, pdf, lag, seen_kmers)
         # some kmers haven't been seen but still affect the probabilities through prior values
         unseen_kmers = (seen_all_kmers == 0)
         print("num unseen kmers:", sum(unseen_kmers))
         if sum(unseen_kmers)>0:
-            pdf = _get_pdf(all_kmers[unseen_kmers],
+            pdf = get_pdf(all_kmers[unseen_kmers],
                            tf.zeros([sum(unseen_kmers), train_col+1, alphabet_size+1], dtype=tf.float64),
                            h, ar_func, mc_samples, vans, train_col, alphabet, get_map)
             scores = _add_kmer_probs_vars(vars_, scores, wt_seq, pdf, lag, all_kmers[unseen_kmers].astype(str))
@@ -465,7 +506,7 @@ def get_bear_probs_seqs(bear_path, seqs, train_col,
         all_counts = counter(all_kmers)[:, None, :]
         if np.all(all_counts == 0):
             print("no kmers found, are you sure you have the correct kmc file and lag?")
-        pdf = _get_pdf(all_kmers, all_counts, h, ar_func, mc_samples, vans, train_col, alphabet, get_map)
+        pdf = get_pdf(all_kmers, all_counts, h, ar_func, mc_samples, vans, train_col, alphabet, get_map)
         scores = _add_kmer_probs_seqs(seqs, scores, pdf, lag, all_kmers)
     else:
         seen_all_kmers = np.zeros(len(all_kmers))
@@ -480,14 +521,14 @@ def get_bear_probs_seqs(bear_path, seqs, train_col,
             seen_all_kmers += np.isin(all_kmers, seen_kmers)
             if np.sum(in_kmers)>0:
                 # get probabilities of all transitions out of each kmer
-                pdf = _get_pdf(seen_kmers, seen_counts, h, ar_func, mc_samples, vans, train_col, alphabet, get_map)
+                pdf = get_pdf(seen_kmers, seen_counts, h, ar_func, mc_samples, vans, train_col, alphabet, get_map)
                 # goes through all mutants and add the probabilities contributed by this batch of kmers
                 scores = _add_kmer_probs_seqs(seqs, scores, pdf, lag, seen_kmers)
         # some kmers haven't been seen but still affect the probabilities through prior values
         unseen_kmers = (seen_all_kmers == 0)
         print("num unseen kmers:", sum(unseen_kmers))
         if sum(unseen_kmers)>0:
-            pdf = _get_pdf(all_kmers[unseen_kmers],
+            pdf = get_pdf(all_kmers[unseen_kmers],
                            tf.zeros([sum(unseen_kmers), train_col+1, alphabet_size+1], dtype=tf.float64),
                            h, ar_func, mc_samples, vans, train_col, alphabet, get_map)
             scores = _add_kmer_probs_seqs(seqs, scores, pdf, lag, all_kmers[unseen_kmers].astype(str))
