@@ -70,7 +70,10 @@ def load_bear(path):
     data = load_ds(config['data']['files_path'], config['data']['start_token'], int(config['train']['batch_size']),
                    config['data']['sparse'] == 'True', alphabet, int(config['data']['num_ds']))
     
-    return lag, alphabet, h, ar_func, data
+    @tf.function
+    def ar_func_tf(kmers):
+        return tf.nn.softmax(ar_func(kmers)) + epsilon
+    return lag, alphabet, h, ar_func_tf, data
 
 def df_to_func(df, num_models, mc_samples, summed=True):
     if summed:
@@ -79,7 +82,7 @@ def df_to_func(df, num_models, mc_samples, summed=True):
         prob_func = lambda kp1mers_ex: df.loc[kp1mers_ex].to_numpy().reshape([-1, num_models, mc_samples])
     return prob_func
     
-def get_pdf(kmers, counts, h, ar_func, mc_samples, vans, train_col, alphabet, get_map, summed=True, get_df=False):
+def get_pdf(kmers, counts, h, ar_func, mc_samples, vans, train_col, alphabet, get_map, summed=True, output='func'):
     """Get probabilities of all k+1-mer transitions. Uses a dataframe indexed by k+1-mers
     and with sampled transition probabilities as each of the columns. One can pass a k+1-mer
     to df to get the transition probability samples from each model.
@@ -97,8 +100,9 @@ def get_pdf(kmers, counts, h, ar_func, mc_samples, vans, train_col, alphabet, ge
     summed : bool, default=True
         Whether prob func should sum the probabilities of all kp1-mer transitions (True)
         or return the matrix of probabilities with first dimension kmp1-mers (False)
-    get_df : bool, default=False
-        Whether to return the df instead of the pdf.
+    output : str, default='func'
+        Whether to get a function that returns probabilities from a bunch of kp1-mers ("func"), a df ("df"),
+        or a numpy array (shape [kmer, letter, model, mc_samples]) ("numpy").
     
     Returns
     -------
@@ -108,52 +112,58 @@ def get_pdf(kmers, counts, h, ar_func, mc_samples, vans, train_col, alphabet, ge
         of the kmers parameter.
     """
     alphabet_size = len(core.alphabets_en[alphabet]) - 1
+    if get_map:
+        mc_samples = 1
     
     # take only the counts from the training column
     counts = counts[:, train_col, :]
-    # get all k+1-mers
-    kp1mers = cross_str_arrays(kmers, core.alphabets_en[alphabet], exch='X')
     
     # get the ar_func values on all kmers
     num_models = len(vans)
     if len(vans) > 0:
         # laod van concs
-        alpha = np.array(vans)[:, None, None]*tf.ones([len(kmers), alphabet_size + 1], dtype=tf.float64)[None, ...]
+        alpha = np.array(vans)[:, None, None]*np.ones([len(kmers), alphabet_size + 1])[None, ...]
     if ar_func != None:
         # load BEAR concs
         num_models += len(h)
-        ar_vals = tf.nn.softmax(ar_func(core.tf_one_hot(kmers, alphabet)))+epsilon
+        ar_vals = ar_func(core.tf_one_hot(kmers, alphabet)).numpy()
         dec_vals = ar_vals[None, :, :]/h[:, None, None]
         #concatenate the van and BEAR concs
         if len(vans) > 0:
-            alpha = tf.concat([dec_vals, alpha], axis=0)
+            alpha = np.concatenate([dec_vals, alpha], axis=0)
         else:
             alpha = dec_vals
     concs = alpha + counts[None, :, :]
     if ar_func != None and get_map:
         # also add the AR
         num_models += 1
-        concs = tf.concat([ar_vals[None, ...], concs], axis=0)
+        concs = np.concatenate([ar_vals[None, ...], concs], axis=0)
     
     # sample probabilities for each k+1-mer
     if get_map:
         log_probs = np.log(concs/(np.sum(concs, axis=-1)[..., None])).reshape([1, num_models, -1])
     else:
-        log_probs = np.log(tfp.distributions.Dirichlet(concs).sample(mc_samples).numpy().reshape([mc_samples, num_models, -1]))
+        log_probs = np.random.standard_gamma(concs, size=np.r_[[mc_samples], np.shape(concs)])
+        log_probs = np.log(log_probs / np.sum(log_probs, axis=-1)[..., None])
+        # log_probs = np.log(tfp.distributions.Dirichlet(concs).sample(mc_samples).numpy().reshape([mc_samples, num_models, -1]))
     
     # Build df
-    pd_dict = {'kmer': np.array(kp1mers).astype(str)}
-    for i in range(num_models):
-        pd_dict['prob_{}'.format(i)] = log_probs[:, i, :].T
-    df = pd.concat([pd.DataFrame(v) for k, v in pd_dict.items()], axis=1, keys=pd_dict.keys()).set_index(('kmer', 0))
-
-    if get_df:
-        prob_func = df
-        # drop the names of the columns
-        prob_func.columns = np.arange(len(prob_func.columns))
+    if output == 'numpy':
+        return np.transpose(log_probs.reshape([mc_samples, num_models, len(kmers), alphabet_size+1]), [2, 3, 1, 0])
     else:
-        prob_func = df_to_func(df, num_models, mc_samples, summed=summed)
-    return prob_func
+        # get all k+1-mers
+        kp1mers = cross_str_arrays(kmers, core.alphabets_en[alphabet], exch='X')
+        
+        pd_dict = {'kmer': np.array(kp1mers).astype(str)}
+        for i in range(num_models):
+            pd_dict['prob_{}'.format(i)] = log_probs[:, i, :].T
+        df = pd.concat([pd.DataFrame(v) for k, v in pd_dict.items()], axis=1, keys=pd_dict.keys()).set_index(('kmer', 0))
+        if output == 'df':
+            df.columns = np.arange(len(df.columns))
+            return df
+        elif output == 'func':
+            prob_func = df_to_func(df, num_models, mc_samples, summed=summed)
+            return prob_func
 
 def get_kmc_count(kmer, kmc_file, kmer_token, c):
     kmer_token.from_string(kmer)
