@@ -11,6 +11,7 @@ from . import bear_net
 from . import ar_funcs
 from . import core
 from . import dataloader
+from . import log_gamma
 
 epsilon = tf.keras.backend.epsilon()
 
@@ -143,8 +144,8 @@ def get_pdf(kmers, counts, h, ar_func, mc_samples, vans, train_col, alphabet, ge
     if get_map:
         log_probs = np.log(concs/(np.sum(concs, axis=-1)[..., None])).reshape([1, num_models, -1])
     else:
-        log_probs = np.random.standard_gamma(concs, size=np.r_[[mc_samples], np.shape(concs)])
-        log_probs = np.log(log_probs / np.sum(log_probs, axis=-1)[..., None])
+        log_probs = log_gamma.log_gamma(concs, size=[mc_samples])
+        log_probs = log_probs - logsumexp(log_probs, axis=-1)[..., None] + np.log(np.shape(log_probs)[-1])
         # log_probs = np.log(tfp.distributions.Dirichlet(concs).sample(mc_samples).numpy().reshape([mc_samples, num_models, -1]))
     
     # Build df
