@@ -89,13 +89,13 @@ def test_mc_sampling_seqs():
     
     # First by mc sampling
     scores = get_var_probs.get_bear_probs_seqs(None, seqs, 0, data=data,
-                                          mc_samples=200000, vans=vans, lag=3, alphabet='dna')
+                                          mc_samples=20000, vans=vans, lag=3, alphabet='dna')
     #also using kmc
     scores_kmc = get_var_probs.get_bear_probs_seqs(None, seqs, 0, data=data,
-                                              mc_samples=200000, vans=vans, lag=3, alphabet='dna', kmc_path=kmc_path)
+                                              mc_samples=20000, vans=vans, lag=3, alphabet='dna', kmc_path=kmc_path)
 
     #calc true probs
-    def get_log_dir(seen, all_, van, num_samples=200000):
+    def get_log_dir(seen, all_, van, num_samples=20000):
         return np.average(np.log(st.beta.rvs(seen+van, all_-seen+alphabet_size*van, size=num_samples)))
 
     true_scores = np.empty([len(seqs), len(vans)])
@@ -123,6 +123,7 @@ def test_mc_sampling_seqs():
     def get_quotient(seen, all_, van):
         return np.log((seen+van) / (all_+(alphabet_size+1)*van))
     
+    true_scores = np.empty([len(seqs), len(vans)])
     for i, van in enumerate(vans):
         true_scores[0, i] = (2*get_quotient(4, 4, van) + 1*get_quotient(3, 4, van)
                              + 1*get_quotient(1, 7, van) +  2*get_quotient(1, 1, van))

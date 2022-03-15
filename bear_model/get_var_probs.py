@@ -1,5 +1,6 @@
 import numpy as np
 import pandas as pd
+from scipy.special import logsumexp
 import tensorflow.compat.v2 as tf
 import tensorflow_probability as tfp
 import dill
@@ -145,7 +146,7 @@ def get_pdf(kmers, counts, h, ar_func, mc_samples, vans, train_col, alphabet, ge
         log_probs = np.log(concs/(np.sum(concs, axis=-1)[..., None])).reshape([1, num_models, -1])
     else:
         log_probs = log_gamma.log_gamma(concs, size=[mc_samples])
-        log_probs = log_probs - logsumexp(log_probs, axis=-1)[..., None] + np.log(np.shape(log_probs)[-1])
+        log_probs = log_probs - logsumexp(log_probs, axis=-1)[..., None]
         # log_probs = np.log(tfp.distributions.Dirichlet(concs).sample(mc_samples).numpy().reshape([mc_samples, num_models, -1]))
     
     # Build df
@@ -157,7 +158,7 @@ def get_pdf(kmers, counts, h, ar_func, mc_samples, vans, train_col, alphabet, ge
         
         pd_dict = {'kmer': np.array(kp1mers).astype(str)}
         for i in range(num_models):
-            pd_dict['prob_{}'.format(i)] = log_probs[:, i, :].T
+            pd_dict['prob_{}'.format(i)] = log_probs[:, i].reshape([mc_samples, -1]).T
         df = pd.concat([pd.DataFrame(v) for k, v in pd_dict.items()], axis=1, keys=pd_dict.keys()).set_index(('kmer', 0))
         if output == 'df':
             df.columns = np.arange(len(df.columns))
