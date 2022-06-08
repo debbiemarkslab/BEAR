@@ -50,11 +50,11 @@ def test_mc_sampling():
     #assert
     fraction_error = (np.average(scores, axis=-1)-true_scores)/true_scores
     print(np.absolute(fraction_error))
-    assert np.all(np.absolute(fraction_error) < 0.01)
+    assert np.all(np.absolute(fraction_error) < 0.02)
     
     fraction_error = (np.average(scores_kmc, axis=-1)-true_scores)/true_scores
     print(np.absolute(fraction_error))
-    assert np.all(np.absolute(fraction_error) < 0.01)
+    assert np.all(np.absolute(fraction_error) < 0.02)
     
     # Now by MAP
     scores = get_var_probs.get_bear_probs(None, wt_seq, vars_, 0, data=data, get_map=True,
