@@ -315,6 +315,7 @@ def _get_all_kmers_vars(vars_, wt_seq, lag):
     -------
     all_kmers : numpy array
     """
+    # TODO speed up by allocating all memory up front
     all_kmers = []
     for (wt_aa, mt_aa, pos) in vars_:
         pos = pos + lag
@@ -412,6 +413,7 @@ def get_bear_probs(bear_path, wt_seq, vars_, train_col,
         print(all_kmers, all_counts)
         if np.all(all_counts == 0):
             print("no kmers found, are you sure you have the correct kmc file and lag?")
+        # TODO speed up by getting rid of checking seen
         pdf = get_pdf(all_kmers, all_counts, h, ar_func, mc_samples, vans, train_col, alphabet_name, get_map)
         scores = _add_kmer_probs_vars(vars_, scores, wt_seq, pdf, lag, all_kmers)
     else:
@@ -443,9 +445,14 @@ def get_bear_probs(bear_path, wt_seq, vars_, train_col,
     return scores
 
 ##############################################whole_seqs##########################################
+import time
 def _add_kmer_probs_seqs(seqs, scores, pdf, lag, seen_kmers, get_marg, alphabet):
     if get_marg:
+        t0 = time.time()
         for i, seq in enumerate(seqs):
+            if i%1000 ==0:
+                print(i, "seqs in", time.time() - t0)
+                t0 = time.time()
             kp1mers = [(seq[l:l+lag], alphabet==seq[l+lag]) for l in range(len(seq)-lag) if seq[l:l+lag] in seen_kmers]
             kmers_red = np.array([k for k, b in kp1mers])
             counts_red = np.array([b for k, b in kp1mers])
@@ -455,7 +462,7 @@ def _add_kmer_probs_seqs(seqs, scores, pdf, lag, seen_kmers, get_marg, alphabet)
                 counts[j] = np.sum(counts_red[maps==j], axis=0)
             scores[i, :, 0] += pdf(kmers, counts)
     else:
-        # TODO get rid of checking seen kmers to spped up computation
+        # TODO get rid of checking seen kmers to speed up computation
         for i, seq in enumerate(seqs):
             kp1mers = [seq[l:l+lag+1] for l in range(len(seq)-lag) if seq[l:l+lag] in seen_kmers]
             # if the wt or mt kmers are in the df, the log probability will be added to the score
@@ -474,12 +481,15 @@ def _get_all_kmers_seqs(seqs, lag):
     -------
     all_kmers : numpy array
     """
-    all_kmers = []
-    for seq in seqs:
+    all_kmers = sum([len(seq)-lag for seq in seqs])*[lag*'A']
+    ind = 0
+    for i, seq in enumerate(seqs):
         #short seqs cannot be kmc'd properly: kp1-mers with both [ and ]
         assert len(seq.replace('[', '').replace(']', '')) >= lag
-        kmers = [seq[i:i+lag] for i in range(len(seq)-lag)]
-        all_kmers = all_kmers + list(kmers)
+        n_kmers = len(seq)-lag
+        kmers = [seq[i:i+lag] for i in range(n_kmers)]
+        all_kmers[ind : ind + n_kmers] = kmers
+        ind += n_kmers
     return np.array(list(set(all_kmers))).astype(str)
 
 
@@ -539,6 +549,7 @@ def get_bear_probs_seqs(bear_path, seqs, train_col,
         ar_func = None
     alphabet = core.alphabets_en[alphabet_name]
     alphabet_size = len(alphabet)-1
+    print("loaded BEAR")
 
     # pad seqs
     if not no_ends:
@@ -546,6 +557,7 @@ def get_bear_probs_seqs(bear_path, seqs, train_col,
 
     # get list of all possible kmers
     all_kmers = _get_all_kmers_seqs(seqs, lag)
+    print("got list of all kmers")
     
     # no sampling if just using the MAP
     if get_map or get_marg:
@@ -557,13 +569,16 @@ def get_bear_probs_seqs(bear_path, seqs, train_col,
     if kmc_path is not None:
         counter = make_kmc_genome_counter(kmc_path, lag, reverse=kmc_reverse, no_end=no_ends)
         all_counts = counter(all_kmers)[:, None, :]
+        print("got kmer counts")
         if np.all(all_counts == 0):
             print("no kmers found, are you sure you have the correct kmc file and lag?")
         pdf = get_pdf(all_kmers, all_counts, h, ar_func, mc_samples, vans, train_col, alphabet_name, get_map, get_marg)
+        print("got pdf")
         class FullSet(set):
             def __contains__(self, item):
                 return True
         scores = _add_kmer_probs_seqs(seqs, scores, pdf, lag, FullSet(), get_marg, alphabet)
+        print("got scores")
     else:
         seen_all_kmers = np.zeros(len(all_kmers))
         for kmers, counts in iter(data):
