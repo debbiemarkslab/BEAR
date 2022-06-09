@@ -443,19 +443,21 @@ def get_bear_probs(bear_path, wt_seq, vars_, train_col,
     return scores
 
 ##############################################whole_seqs##########################################
-
 def _add_kmer_probs_seqs(seqs, scores, pdf, lag, seen_kmers, get_marg, alphabet):
     if get_marg:
         for i, seq in enumerate(seqs):
-            kp1mers = [(seq[i:i+lag], alphabet==seq[i+lag]) for i in range(len(seq)-lag) if seq[i:i+lag] in seen_kmers]
-            kmers = np.array([k for k, b in kp1mers])
-            counts = np.array([b for k, b in kp1mers])
-            kmers, map_ = np.unique(kmers, return_inverse=True)
-            counts = np.array([np.sum(counts[map_==i], axis=0) for i in range(len(kmers))])
+            kp1mers = [(seq[l:l+lag], alphabet==seq[l+lag]) for l in range(len(seq)-lag) if seq[l:l+lag] in seen_kmers]
+            kmers_red = np.array([k for k, b in kp1mers])
+            counts_red = np.array([b for k, b in kp1mers])
+            kmers, inds, maps, nums = np.unique(kmers_red, return_index=True, return_inverse=True, return_counts=True)
+            counts = counts_red[inds].astype(int)
+            for j in zip(np.argwhere(nums>1)[:, 0]):
+                counts[j] = np.sum(counts_red[maps==j], axis=0)
             scores[i, :, 0] += pdf(kmers, counts)
     else:
+        # TODO get rid of checking seen kmers to spped up computation
         for i, seq in enumerate(seqs):
-            kp1mers = [seq[i:i+lag+1] for i in range(len(seq)-lag) if seq[i:i+lag] in seen_kmers]
+            kp1mers = [seq[l:l+lag+1] for l in range(len(seq)-lag) if seq[l:l+lag] in seen_kmers]
             # if the wt or mt kmers are in the df, the log probability will be added to the score
             scores[i, :, :] += pdf(kp1mers)
     return scores
@@ -558,7 +560,10 @@ def get_bear_probs_seqs(bear_path, seqs, train_col,
         if np.all(all_counts == 0):
             print("no kmers found, are you sure you have the correct kmc file and lag?")
         pdf = get_pdf(all_kmers, all_counts, h, ar_func, mc_samples, vans, train_col, alphabet_name, get_map, get_marg)
-        scores = _add_kmer_probs_seqs(seqs, scores, pdf, lag, all_kmers, get_marg, alphabet)
+        class FullSet(set):
+            def __contains__(self, item):
+                return True
+        scores = _add_kmer_probs_seqs(seqs, scores, pdf, lag, FullSet(), get_marg, alphabet)
     else:
         seen_all_kmers = np.zeros(len(all_kmers))
         for kmers, counts in iter(data):
@@ -573,8 +578,10 @@ def get_bear_probs_seqs(bear_path, seqs, train_col,
             if np.sum(in_kmers)>0:
                 # get probabilities of all transitions out of each kmer
                 pdf = get_pdf(seen_kmers, seen_counts, h, ar_func, mc_samples, vans, train_col, alphabet_name, get_map, get_marg)
+                print("got pdf")
                 # goes through all mutants and add the probabilities contributed by this batch of kmers
                 scores = _add_kmer_probs_seqs(seqs, scores, pdf, lag, seen_kmers, get_marg, alphabet)
+                print("updated scores")
         # some kmers haven't been seen but still affect the probabilities through prior values
         unseen_kmers = (seen_all_kmers == 0)
         print("num unseen kmers:", sum(unseen_kmers))
