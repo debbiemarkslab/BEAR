@@ -88,7 +88,8 @@ def df_to_func(df, num_models, mc_samples, summed=True):
         prob_func = lambda kp1mers_ex: df.loc[kp1mers_ex].to_numpy().reshape([-1, num_models, mc_samples])
     return prob_func
     
-def get_pdf(kmers, counts, h, ar_func, mc_samples, vans, train_col, alphabet_name, get_map, get_marg=False, summed=True, output='func'):
+def get_pdf(kmers, counts, h, ar_func, mc_samples, vans, train_col, alphabet_name, get_map,
+            get_marg=False, summed=True, output='func'):
     """Get probabilities of all k+1-mer transitions. Uses a dataframe indexed by k+1-mers
     and with sampled transition probabilities as each of the columns. One can pass a k+1-mer
     to df to get the transition probability samples from each model.
@@ -133,7 +134,7 @@ def get_pdf(kmers, counts, h, ar_func, mc_samples, vans, train_col, alphabet_nam
     # get the ar_func values on all kmers
     num_models = len(vans)
     if len(vans) > 0:
-        # laod van concs
+        # load van concs
         alpha = np.array(vans)[:, None, None]*np.ones([len(kmers), alphabet_size + 1])[None, ...]
     if ar_func != None:
         # load BEAR concs
@@ -152,34 +153,39 @@ def get_pdf(kmers, counts, h, ar_func, mc_samples, vans, train_col, alphabet_nam
         concs = np.concatenate([ar_vals[None, ...], concs], axis=0)
     
     # sample probabilities for each k+1-mer
-    if get_map:
-        log_probs = np.log(concs/(np.sum(concs, axis=-1)[..., None])).reshape([1, num_models, -1])
-    else:
-        log_probs = log_gamma.log_gamma(concs, size=[mc_samples])
-        log_probs = log_probs - logsumexp(log_probs, axis=-1)[..., None]
-        # log_probs = np.log(tfp.distributions.Dirichlet(concs).sample(mc_samples).numpy().reshape([mc_samples, num_models, -1]))
-    
-    # Build df
     if get_marg:
         pd_dict = {'kmer': np.array(kmers).astype(str)}
         for i in range(num_models):
             pd_dict['prob_{}'.format(i)] = concs[i]
-        df = pd.concat([pd.DataFrame(v) for k, v in pd_dict.items()], axis=1, keys=pd_dict.keys()).set_index(('kmer', 0))
+        df = pd.concat([pd.DataFrame(v) for k, v in pd_dict.items()],
+                       axis=1, keys=pd_dict.keys()).set_index(('kmer', 0))
         def prob_func(kmers, counts):
+            # calculate log probability of counts from kmers
             concs = df.loc[kmers].to_numpy().reshape([len(kmers), num_models, alphabet_size+1])
-            log_probs = (loggamma(np.sum(concs, axis=-1)) - np.sum(loggamma(concs), axis=-1)
-                         - loggamma(np.sum(concs + counts[:, None, :], axis=-1)) + np.sum(loggamma(concs + counts[:, None, :]), axis=-1))
+            log_probs = (loggamma(np.sum(concs, axis=-1))
+                         - np.sum(loggamma(concs), axis=-1)
+                         - loggamma(np.sum(concs + counts[:, None, :], axis=-1))
+                         + np.sum(loggamma(concs + counts[:, None, :]), axis=-1))
             return np.sum(log_probs, axis=0)
         return prob_func
-    elif output == 'numpy':
-        return np.transpose(log_probs.reshape([mc_samples, num_models, len(kmers), alphabet_size+1]), [2, 3, 1, 0])
+    elif get_map:
+        log_probs = np.log(concs/(np.sum(concs, axis=-1)[..., None])).reshape([1, num_models, -1])
+    else:
+        log_probs = log_gamma.log_gamma(concs, size=[mc_samples])
+        log_probs = log_probs - logsumexp(log_probs, axis=-1)[..., None]
+    
+    # Build df
+    if output == 'numpy':
+        return np.transpose(log_probs.reshape(
+            [mc_samples, num_models, len(kmers), alphabet_size+1]), [2, 3, 1, 0])
     else:
         # get all k+1-mers
         kp1mers = cross_str_arrays(kmers, core.alphabets_en[alphabet_name], exch='X')
         pd_dict = {'kmer': np.array(kp1mers).astype(str)}
         for i in range(num_models):
             pd_dict['prob_{}'.format(i)] = log_probs[:, i].reshape([mc_samples, -1]).T
-        df = pd.concat([pd.DataFrame(v) for k, v in pd_dict.items()], axis=1, keys=pd_dict.keys()).set_index(('kmer', 0))            
+        df = pd.concat([pd.DataFrame(v) for k, v in pd_dict.items()],
+                       axis=1, keys=pd_dict.keys()).set_index(('kmer', 0))            
         if output == 'df':
             df.columns = np.arange(len(df.columns))
             return df
@@ -337,7 +343,7 @@ def parse_var(var):
 def get_bear_probs(bear_path, wt_seq, vars_, train_col,
                    mc_samples=41, vans=[0.1, 1, 10], get_map=False,
                    lag=None, alphabet_name=None, h=None, data=None,
-                   kmc_path=None, kmc_reverse=False):
+                   kmc_path=None, kmc_reverse=False, kmc_no_end=False):
     """Sample posterior predictive probabilities of variants under BEAR by looping through batches of kmers.
     
     Parameters
@@ -371,6 +377,8 @@ def get_bear_probs(bear_path, wt_seq, vars_, train_col,
         Specify the path kmc files if one wishes to use kmc to count kmers instead of cycling through whole dataset.
     kmc_reverse : bool, default=False
         Whether to include counts of the reverse complement of kmers when counting using kmc.
+    kmc_no_end : bool, default=False
+        Whether to not include ends in variant probability changes in KMC.
         
     Returns
     -------
@@ -408,7 +416,7 @@ def get_bear_probs(bear_path, wt_seq, vars_, train_col,
     scores = np.zeros([len(vars_), num_models, mc_samples]) 
     
     if kmc_path is not None:
-        counter = make_kmc_genome_counter(kmc_path, lag, reverse=kmc_reverse, no_end=no_ends)
+        counter = make_kmc_genome_counter(kmc_path, lag, reverse=kmc_reverse, no_end=kmc_no_end)
         all_counts = counter(all_kmers)[:, None, :]
         print(all_kmers, all_counts)
         if np.all(all_counts == 0):
@@ -429,7 +437,8 @@ def get_bear_probs(bear_path, wt_seq, vars_, train_col,
             seen_all_kmers += np.isin(all_kmers, seen_kmers)
             if np.sum(in_kmers)>0:
                 # get probabilities of all transitions out of each kmer
-                pdf = get_pdf(seen_kmers, seen_counts, h, ar_func, mc_samples, vans, train_col, alphabet_name, get_map)
+                pdf = get_pdf(seen_kmers, seen_counts, h, ar_func, mc_samples, vans, train_col,
+                              alphabet_name, get_map)
                 # goes through all mutants and add the probabilities contributed by this batch of kmers
                 scores = _add_kmer_probs_vars(vars_, scores, wt_seq, pdf, lag, seen_kmers)
         # some kmers haven't been seen but still affect the probabilities through prior values
@@ -450,17 +459,22 @@ def _add_kmer_probs_seqs(seqs, scores, pdf, lag, seen_kmers, get_marg, alphabet)
     if get_marg:
         t0 = time.time()
         for i, seq in enumerate(seqs):
-            if i%1000 ==0:
+            if i % 1000 == 0:
                 print(i, "seqs in", time.time() - t0)
                 t0 = time.time()
-            kp1mers = [(seq[l:l+lag], alphabet==seq[l+lag]) for l in range(len(seq)-lag) if seq[l:l+lag] in seen_kmers]
-            kmers_red = np.array([k for k, b in kp1mers])
-            counts_red = np.array([b for k, b in kp1mers])
-            kmers, inds, maps, nums = np.unique(kmers_red, return_index=True, return_inverse=True, return_counts=True)
-            counts = counts_red[inds].astype(int)
-            for j in zip(np.argwhere(nums>1)[:, 0]):
-                counts[j] = np.sum(counts_red[maps==j], axis=0)
-            scores[i, :, 0] += pdf(kmers, counts)
+            kp1mers = [(seq[l:l+lag], alphabet==seq[l+lag]) for l in range(len(seq)-lag)
+                       if seq[l:l+lag] in seen_kmers]
+            if len(kp1mers) > 0:
+                kmers_red = np.array([k for k, b in kp1mers])
+                counts_red = np.array([b for k, b in kp1mers])
+                kmers, inds, maps, nums = np.unique(kmers_red, return_index=True,
+                                                    return_inverse=True, return_counts=True)
+                counts = counts_red[inds].astype(int)
+                print(kmers)
+                for j in zip(np.argwhere(nums>1)[:, 0]):
+                    counts[j] = np.sum(counts_red[maps==j], axis=0)
+                print(counts)
+                scores[i, :, 0] += pdf(kmers, counts)
     else:
         # TODO get rid of checking seen kmers to speed up computation
         for i, seq in enumerate(seqs):
@@ -511,8 +525,11 @@ def get_bear_probs_seqs(bear_path, seqs, train_col,
         Number of samples to take from the posterior predictive of the mutation probabilities.
     vans : numpy array, default = [0.1, 1, 10]
         vanilla regularization to use for BMM models.
-    get_map : bool
-        Gets the probability of the mutations under the MAP model under BEAR instead of sampling models from BEAR.
+    get_map : bool, default=False
+        Gets the probability of the mutations under the MAP model under
+        BEAR instead of sampling models from BEAR.
+    get_marg : bool, default= False
+        Gets posterior predictive probability exactly instead of sampling AR models.
     lag : int, default = None
         Specify if not using BEAR.
     alphabet_name :str, default = None
@@ -522,7 +539,8 @@ def get_bear_probs_seqs(bear_path, seqs, train_col,
     data : tf dataset
         Generator of kmers and counts. Specify if not using BEAR.
     kmc_path : str
-        Specify the path kmc files if one wishes to use kmc to count kmers instead of cycling through whole dataset.
+        Specify the path kmc files if one wishes to use kmc to count kmers instead of
+        cycling through whole dataset.
     kmc_reverse : bool, default=False
         Whether to include counts of the reverse complement of kmers when counting using kmc.
     no_ends: bool, default=False
@@ -572,7 +590,8 @@ def get_bear_probs_seqs(bear_path, seqs, train_col,
         print("got kmer counts")
         if np.all(all_counts == 0):
             print("no kmers found, are you sure you have the correct kmc file and lag?")
-        pdf = get_pdf(all_kmers, all_counts, h, ar_func, mc_samples, vans, train_col, alphabet_name, get_map, get_marg)
+        pdf = get_pdf(all_kmers, all_counts, h, ar_func, mc_samples, vans,
+                      train_col, alphabet_name, get_map, get_marg)
         print("got pdf")
         class FullSet(set):
             def __contains__(self, item):
@@ -592,7 +611,8 @@ def get_bear_probs_seqs(bear_path, seqs, train_col,
             seen_all_kmers += np.isin(all_kmers, seen_kmers)
             if np.sum(in_kmers)>0:
                 # get probabilities of all transitions out of each kmer
-                pdf = get_pdf(seen_kmers, seen_counts, h, ar_func, mc_samples, vans, train_col, alphabet_name, get_map, get_marg)
+                pdf = get_pdf(seen_kmers, seen_counts, h, ar_func, mc_samples, vans,
+                              train_col, alphabet_name, get_map, get_marg)
                 print("got pdf")
                 # goes through all mutants and add the probabilities contributed by this batch of kmers
                 scores = _add_kmer_probs_seqs(seqs, scores, pdf, lag, seen_kmers, get_marg, alphabet)
@@ -604,7 +624,8 @@ def get_bear_probs_seqs(bear_path, seqs, train_col,
             pdf = get_pdf(all_kmers[unseen_kmers],
                            np.zeros([sum(unseen_kmers), train_col+1, alphabet_size+1]),
                            h, ar_func, mc_samples, vans, train_col, alphabet_name, get_map, get_marg)
-            scores = _add_kmer_probs_seqs(seqs, scores, pdf, lag, all_kmers[unseen_kmers].astype(str), get_marg, alphabet)
+            scores = _add_kmer_probs_seqs(seqs, scores, pdf, lag,
+                                          all_kmers[unseen_kmers].astype(str), get_marg, alphabet)
     if get_map or get_marg:
         scores = scores[..., 0]
     return scores

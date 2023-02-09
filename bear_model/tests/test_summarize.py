@@ -142,7 +142,7 @@ def test_main():
         for lag_kmer in lag_kmers:
             assert lag_kmer in kmer_counts[li]
             assert lag_kmer in kmer_counts_check[li]
-            print(lag_kmer)
+            # print(lag_kmer)
             for gi in range(n_groups):
                 for j in range(len(alphabet)):
                     assert (kmer_counts[li][lag_kmer][gi][j] ==

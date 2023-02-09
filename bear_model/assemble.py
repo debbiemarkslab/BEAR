@@ -16,6 +16,7 @@ class AppearanceDict(dict):
         self.counter += 1
         self[key] = self.counter
         return self.counter
+    
 
 def assemble_no_ends(seqs_fa_file, lengths_to_gen, num_to_gen, bear_path, kmc_path,
                      h=None, reverse=True, save_folder=None, batch_size=100,
@@ -57,7 +58,7 @@ def assemble_no_ends(seqs_fa_file, lengths_to_gen, num_to_gen, bear_path, kmc_pa
     sw_ent : list
         List of length len(seqs) where each entry is the length of the coresponding generated sequences.
         Each entry contains the sitewise entropy of the num_to_gen generated sequences.
-        """
+    """
     lag, alphabet_name, h_bear, ar_func, _ = get_var_probs.load_bear(bear_path)
     if h is None:
         h = h_bear
@@ -112,7 +113,8 @@ def assemble_no_ends(seqs_fa_file, lengths_to_gen, num_to_gen, bear_path, kmc_pa
                     # make a new pdf
                     mc_samples = len(end_kmers)
                     new_kmers_pdf = get_var_probs.get_pdf(new_kmers, counts, h, ar_func, mc_samples,
-                                                          vans, train_col, alphabet_name, get_map, output='numpy')[:, :-1, 0, :]
+                                                          vans, train_col, alphabet_name, get_map,
+                                                          output='numpy')[:, :-1, 0, :]
                     # concatenate pdfs
                     if not all_pdf_start:
                         all_pdf = np.concatenate([all_pdf, new_kmers_pdf])
