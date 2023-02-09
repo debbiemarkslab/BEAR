@@ -5,8 +5,8 @@ BEAR
 ========
 Overview
 ========
-This repository contains code associated with the preprint
-`A generative nonparametric Bayesian model for whole genomes (2021) <https://www.biorxiv.org/content/10.1101/2021.05.30.446360v1>`_,
+This repository contains code associated with the paper
+`A generative nonparametric Bayesian model for whole genomes (2021) <https://proceedings.neurips.cc/paper/2021/hash/e9dcb63ca828d0e00cd05b445099ed2e-Abstract.html>`_ (Alan N. Amin\*, Eli N. Weinstein\*, Debora S. Marks),
 which proposes Bayesian embedded autoregresive (BEAR) models.
 The repository provides example BEAR models as well as tools for implementing new models.
 It enables building, training and evaluating BEAR models on large scale
@@ -37,6 +37,6 @@ This project is available under the MIT license.
 =========
 Reference
 =========
-Preprint: A. N. Amin\*, E. N. Weinstein\*, D. S. Marks,
-A generative nonparametric Bayesian model for whole genomes, 2021 (\* equal contribution).
-https://www.biorxiv.org/content/10.1101/2021.05.30.446360v1
+Alan N. Amin\*, Eli N. Weinstein\*, and Debora S. Marks.
+A generative nonparametric Bayesian model for whole genomes. Advances in Neural Information Processing Systems (NeurIPS). 2021. (\* equal contribution)
+https://proceedings.neurips.cc/paper/2021/hash/e9dcb63ca828d0e00cd05b445099ed2e-Abstract.html
