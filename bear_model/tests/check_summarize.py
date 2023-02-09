@@ -18,9 +18,11 @@ def get_input_info(args):
 
 def get_output_info(args):
     # Dummy run of stages 1 and 2.
-    args.s3 = True
-    n_groups, unit2is = summarize.stage1(args)
-    total_size = summarize.stage2(unit2is, args)
+    args.s3 = False
+    n_groups, kmc_runs = summarize.preprocess_seq_files(
+        args.file, args.l, args.r, args.pr, args.out_prefix,
+        args.p, args.t, args.mk, not args.s3)
+    total_size = summarize.run_kmc(kmc_runs, not args.s3)
     # Compute number of output files.
     n_bin_bits = summarize.compute_n_bin_bits(
                     total_size, n_groups, args.mf)
@@ -92,9 +94,9 @@ def compare_counts(kmer_counts, kmer_counts_check, args):
                         len(kmer_counts[li][lag_kmer]),
                         len(kmer_counts_check[li][lag_kmer])])):
                 for j in range(len(summarize.alphabet)):
-                    print(li, lag_kmer, gi, j)
-                    print(kmer_counts[li][lag_kmer][gi][j])
-                    print(kmer_counts_check[li][lag_kmer][gi][j])
+                    # print(li, lag_kmer, gi, j)
+                    # print(kmer_counts[li][lag_kmer][gi][j])
+                    # print(kmer_counts_check[li][lag_kmer][gi][j])
                     assert (kmer_counts[li][lag_kmer][gi][j] ==
                             kmer_counts_check[li][lag_kmer][gi][j])
 
