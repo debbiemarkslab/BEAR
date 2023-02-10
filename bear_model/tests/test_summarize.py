@@ -18,12 +18,13 @@ def setup_args(pr=None):
     class Args:
 
         def __init__(self, file, out_prefix, nf=None, l=None, mk=None, mf=None,
-                     p=None, r=None, t=None, d1=None, d2=None, n=None, pr=pr,
+                     p=None, r=None, t=None, d1=None, d2=None, n=None, ls=3, pr=pr,
                      s3=False, s12=False, num=10):
             self.file = file
             self.out_prefix = out_prefix
             self.nf = nf
             self.l = l
+            self.ls = ls
             self.mk = mk
             self.mf = mf
             self.p = p
@@ -95,6 +96,7 @@ def test_main():
                        for li in range(max_lag)]
     for li in range(max_lag):
         lag = li + 1
+        print(lag)
         for fi in range(n_in_files):
             for si in range(len(seqs[fi])):
                 full_seq = '['*lag + seqs[fi][si] + ']'

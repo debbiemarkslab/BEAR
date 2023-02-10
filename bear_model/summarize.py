@@ -87,6 +87,7 @@ import multiprocessing
 import os
 import random
 import subprocess
+import itertools
 from subprocess import PIPE
 from typing import Any
 
@@ -406,7 +407,7 @@ class Register:
         self.seq_type = seq_type
 
     def add_next_kmer_count(self, next_kmer, next_count, next_group, writer=None):
-
+        # Add counts and dump if new kmer.
         next_lag_kmer = next_kmer[:-1]
 
         # Initialize.
@@ -467,15 +468,15 @@ class Pre_Consolidate:
 
         # Initialize registers and writers.
         self.n_bins = 2 ** n_bin_bits
-        self.writers = [[open('{}_lag_{}_file_{}.tsv'.format(
+        self.writers = [[open('{}_lag_{}_file_{}_kmer_start_.tsv'.format(
                               out_prefix, li+1, bi), 'w')
                          for bi in range(self.n_bins)]
-                        for li in range(self.max_lag)]
+                        for li in np.arange(self.max_lag)]
         # Registers take in kmer counts line-by-line and write to the writers.
         # Make a register for each kmer lag
         self.registers = [Register(n_groups, n_bin_bits, 'pre', self.max_lag,
                                    writers=self.writers)
-                          for li in range(self.max_lag)]
+                          for li in np.arange(self.max_lag)]
 
     def __call__(self):
         # Iterate through heap.
@@ -496,7 +497,7 @@ class Pre_Consolidate:
 
     def send_to_registers(self, kmer, count, group, writer=None):
         # Send beginning of kmer to each register.
-        for li in range(len(kmer)-1):
+        for li in np.arange(len(kmer)-1):
             self.registers[li].add_next_kmer_count(kmer[:(li+2)], count, group)
 
     def end(self):
@@ -509,50 +510,63 @@ class Pre_Consolidate:
 
 class Consolidate:
     """Consolidate kmer counting results."""
-    def __init__(self, kmc_runs, n_groups, n_bin_bits, lag, max_lag, out_prefix):
+    def __init__(self, kmc_runs, n_groups, n_bin_bits, lag, max_lag, out_prefix,
+                 kmer_start):
 
         # Initialize queues.
         self.max_lag = max_lag
         self.lag = lag
+        self.len_start = len(kmer_start)
+        self.kmer_start = kmer_start
         # get suffixes for lag and full for max_lag.
         self.queue = []
         self.init_queue = []
+        self.no_kmers_seen = True # tracks if the file is empty
         for kmc_run in kmc_runs:
             out_file, group, seq_type, k = kmc_run.get_output_info()
-            if (seq_type == 'suf' and k >= lag) or (seq_type == 'full' and k == max_lag + 1):
+            if ((seq_type == 'suf' and k >= lag)
+                or (seq_type == 'full' and k == max_lag + 1)):
                 self.init_queue.append((out_file, group, seq_type))
 
         # Initialize register.
         self.n_bins = 2 ** n_bin_bits
-        self.writer_names = ['{}_lag_{}_file_{}.tsv'.format(
-                                        out_prefix, lag, bi)
+        self.writer_names = ['{}_lag_{}_file_{}_kmer_start_{}.tsv'.format(
+                                 out_prefix, lag, bi, self.kmer_start)
                              for bi in range(self.n_bins)]
         self.register = Register(n_groups, n_bin_bits, seq_type, max_lag)
 
     def start(self):
         # Start reading in queue.
-        for elem in self.init_queue:
-            self.load_onto_queue(open(elem[0], 'r'), elem[1], elem[2])
+        for out_file, group, seq_type in self.init_queue:
+            self.load_onto_queue(open(out_file, 'r'), group, seq_type)
 
-        # Open writer.
-        self.writer = [open(elem, 'a') for elem in self.writer_names]
+        # Open writers.
+        if self.kmer_start == '':
+            self.writer = [open(elem, 'a') for elem in self.writer_names]
+        else:
+            self.writer = [open(elem, 'w') for elem in self.writer_names]
 
     def __call__(self):
 
         # Put jobs on heap and open writers.
         self.start()
 
-        # Iterate through heap.
+        # Iterate through queue.
         while len(self.queue) > 0:
             heapq.heappop(self.queue)(self, self.writer)
 
         # Write final kmer counts and close writers.
-        self.end()
+        if not self.no_kmers_seen:
+            self.end()
 
     def load_onto_queue(self, file_handle, group, seq_type):
         # Load next kmer and counts.
         line = file_handle.readline()
+        # go to first instance of kmer_start, or end of file
+        while line[:self.len_start] != self.kmer_start and line != '':
+            line = file_handle.readline()
         if line != '':
+            self.no_kmers_seen = False
             kmer, line1 = line.split('\t')
             if seq_type == 'suf':
                 kmer += ']'
@@ -592,30 +606,65 @@ class Unit3i:
 def compute_n_bin_bits(total_size, n_groups, mf):
     """Compute number of output files per lag and bits needed to specify
     them. That is, 2 ** n_bin_bits = n_bins."""
-    return int(max([np.ceil(np.log(total_size * n_groups /
-                                   (mf * 1e9)) / np.log(2)), 0]))
+    approx_n_chunks = total_size * n_groups / (mf * 1e9)
+    n_chunks_2 = int(max([
+        np.ceil(np.log(approx_n_chunks) / np.log(2)), 0]))
+    return n_chunks_2
 
 
-def stage3(kmc_runs, total_size, n_groups, lag, chunk_size, out_prefix):
+def get_starts(L):
+    """ Get all kmers of the DNA alphabet of length L. """
+    if L < 1:
+        return ['']
+    else:
+        list_ = L * [['A', 'C', 'G', 'T']]
+        return [''.join(letters)
+                for letters in itertools.product(*list_)]
+
+def stage3(kmc_runs, total_size, n_groups, lag, chunk_size, len_start,
+           out_prefix):
     """Merge KMC output kmer counts to produce kmer-transition counts for all
     lags."""
     # Initialize registers and writers.
     n_bin_bits = compute_n_bin_bits(total_size, n_groups, chunk_size)
 
     # Process prefixes.
-    Pre_Consolidate(kmc_runs, n_groups, n_bin_bits, lag, out_prefix)()
+    Pre_Consolidate(kmc_runs, n_groups, n_bin_bits, lag,
+                    out_prefix)()
 
     # (Multi)process files.
+    # Multiprocess across kmer starts and lags
     jobs = []
     for li in range(lag):
-        consolidate = Consolidate(kmc_runs, n_groups, n_bin_bits, li+1, lag, out_prefix)
-        p = multiprocessing.Process(target=consolidate)
-        jobs.append(p)
-        p.start()
-
+        len_comp = np.min([len_start, np.max([li-4, 0])])
+        for kmer_start in get_starts(len_comp):
+            consolidate = Consolidate(kmc_runs, n_groups, n_bin_bits, li+1,
+                                      lag, out_prefix, kmer_start)
+            p = multiprocessing.Process(target=consolidate)
+            jobs.append(p)
+            p.start()
+            
     # Wait for all processes to finish
     for job in jobs:
         job.join()
+
+    # Concatenate different starts
+    n_bins = 2 ** n_bin_bits
+    for li in range(lag):
+        len_comp = np.min([len_start, np.max([li-4, 0])])
+        kmers = get_starts(len_comp)
+        if '' not in kmers:
+            kmers += ['']
+        for bi in range(n_bins):
+            fnames = ['{}_lag_{}_file_{}_kmer_start_{}.tsv'.format(
+                      out_prefix, li+1, bi, k) for k in kmers]
+            out_fname = '{}_lag_{}_file_{}.tsv'.format(
+                out_prefix, li+1, bi)
+            command = 'rm ' + out_fname
+            subprocess.run(command, shell=True)
+            command = 'cat {} > {}'.format(
+                ' '.join(fnames), out_fname)
+            subprocess.run(command, shell=True)
 
     return 2 ** n_bin_bits
 
@@ -638,7 +687,8 @@ def run(args):
 
     # Postprocess after KMC.
     print('Stage 3...', datetime.datetime.now())
-    n_bins = stage3(kmc_runs, total_size, n_groups, args.l, args.mf, args.out_prefix)
+    n_bins = stage3(kmc_runs, total_size, n_groups, args.l, args.mf,
+                    args.ls, args.out_prefix)
     print('Finished.', datetime.datetime.now())
     return n_bins
 
@@ -670,6 +720,9 @@ if __name__ == '__main__':
     parser.add_argument('out_prefix', help='Prefix for output files.')
     parser.add_argument('-l', default=10, type=int,
                         help='Maximum lag of BEAR model.')
+    parser.add_argument('-ls', default=4, type=int,
+                        help='Length at which to split BEAR task. Breaks into'
+                              +' 4**ls tasks.')
     parser.add_argument('-mk', default=12, type=float,
                         help='Maximum memory available to KMC (Gb)')
     parser.add_argument('-mf', default=0.1, type=float,
