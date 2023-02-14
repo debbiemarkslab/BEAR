@@ -164,10 +164,10 @@ def test_small():
     main_pr(True)
     main_pr(False)
 
-# def test_check():
-#     # --- Compare using large scale check. ---
-#     args, *_ = setup_args()
-#     check_summarize.main(args)
+def test_check():
+    # --- Compare using large scale check. ---
+    args, *_ = setup_args()
+    check_summarize.main(args)
     
-#     args, *_ = setup_args(pr=True)
-#     check_summarize.main(args)
+    args, *_ = setup_args(pr=True)
+    check_summarize.main(args)
