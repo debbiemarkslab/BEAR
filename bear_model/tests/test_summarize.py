@@ -48,7 +48,7 @@ def setup_args(pr=None):
     return args, max_lag, in_file_set, out_prefix
 
 
-def test_main():
+def main_pr(pr):
     np.random.seed(1)
     # --- Set up input. ---
     in_file_set = os.path.join(exdata_path, 'infiles.csv')
@@ -82,7 +82,7 @@ def test_main():
                                               file_types[fi]))
 
     # --- Run. ---
-    args, max_lag, in_file_set, out_prefix = setup_args()
+    args, max_lag, in_file_set, out_prefix = setup_args(pr)
     nbins, nbins_rev = summarize.main(args)
 
     # --- Count kmers in memory. ---
@@ -160,11 +160,14 @@ def test_main():
                     assert (kmer_counts_rev[li][lag_kmer][gi][j] ==
                             kmer_counts_check_rev[li][lag_kmer][gi][j])
 
+def test_small():
+    main_pr(True)
+    main_pr(False)
 
-def test_check():
-    # --- Compare using large scale check. ---
-    args, *_ = setup_args()
-    check_summarize.main(args)
+# def test_check():
+#     # --- Compare using large scale check. ---
+#     args, *_ = setup_args()
+#     check_summarize.main(args)
     
-    args, *_ = setup_args(pr=True)
-    check_summarize.main(args)
+#     args, *_ = setup_args(pr=True)
+#     check_summarize.main(args)

@@ -22,6 +22,9 @@ out_prefix : str
 -l : int, default = 10
     The maximum lag (the truncation level).
     
+-ls : int, default = 3
+    Length of sequence to split jobs by.
+    
 -nf : bool
     Do not count kmers in the forward direction.
     
@@ -29,7 +32,7 @@ out_prefix : str
     Also run KMC including the reverse compliment of sequences when counting.
     
 -pr : bool
-    Do all lags for pre and full KMCs.
+    Do all lags for pre and full KMCs. Highly recommended.
 
 -mk : float, default = 12
     Maximum amount of memory available, in gigabytes (corresponding to the
@@ -511,7 +514,7 @@ class Pre_Consolidate:
 class Consolidate:
     """Consolidate kmer counting results."""
     def __init__(self, kmc_runs, n_groups, n_bin_bits, lag, max_lag, out_prefix,
-                 kmer_start):
+                 kmer_start, pr):
 
         # Initialize queues.
         self.max_lag = max_lag
@@ -524,8 +527,10 @@ class Consolidate:
         self.no_kmers_seen = True # tracks if the file is empty
         for kmc_run in kmc_runs:
             out_file, group, seq_type, k = kmc_run.get_output_info()
-            if ((seq_type == 'suf' and k >= lag)
-                or (seq_type == 'full' and k == max_lag + 1)):
+            suf_lags = np.arange(lag, max_lag + 1) if not pr else [lag]
+            full_lag = 1 + (max_lag if not pr else lag)
+            if ((seq_type == 'suf' and k in suf_lags)
+                or (seq_type == 'full' and k == full_lag)):
                 self.init_queue.append((out_file, group, seq_type))
 
         # Initialize register.
@@ -622,7 +627,7 @@ def get_starts(L):
                 for letters in itertools.product(*list_)]
 
 def stage3(kmc_runs, total_size, n_groups, lag, chunk_size, len_start,
-           out_prefix):
+           out_prefix, pr):
     """Merge KMC output kmer counts to produce kmer-transition counts for all
     lags."""
     # Initialize registers and writers.
@@ -639,7 +644,7 @@ def stage3(kmc_runs, total_size, n_groups, lag, chunk_size, len_start,
         len_comp = np.min([len_start, np.max([li-4, 0])])
         for kmer_start in get_starts(len_comp):
             consolidate = Consolidate(kmc_runs, n_groups, n_bin_bits, li+1,
-                                      lag, out_prefix, kmer_start)
+                                      lag, out_prefix, kmer_start, pr)
             p = multiprocessing.Process(target=consolidate)
             jobs.append(p)
             p.start()
@@ -688,7 +693,7 @@ def run(args):
     # Postprocess after KMC.
     print('Stage 3...', datetime.datetime.now())
     n_bins = stage3(kmc_runs, total_size, n_groups, args.l, args.mf,
-                    args.ls, args.out_prefix)
+                    args.ls, args.out_prefix, args.pr)
     print('Finished.', datetime.datetime.now())
     return n_bins
 
