@@ -48,7 +48,16 @@ out_prefix : str
 -t : str, default = 'tmp/'
     Folder in which to store KMC's intermediate results. A valid path MUST be
     provided.
+    
+-s12 : bool
+    Run only stages 1 and 2.
 
+-s3 : bool
+    Run only stage 3.
+    
+-s3_o : bool
+    If only one group, speed up runtime but do not process ends.
+    
 You can run ``python summarize.py -h`` for help and more advanced options.
 
 **Output:**
@@ -80,7 +89,7 @@ import argparse
 from Bio.SeqIO.QualityIO import FastqGeneralIterator
 from Bio.SeqIO.FastaIO import SimpleFastaParser
 from Bio import Seq
-from collections import defaultdict
+from collections import defaultdict, Counter
 import csv
 from dataclasses import dataclass, field
 import datetime
@@ -354,6 +363,46 @@ class KMC_run:
             f.write(stderr_kmc)
             f.write('--- kmc dump ---\n')
             f.write(stderr_kmc_dump)
+            
+    def count_start_kmers(self, max_len_start):
+        start_counts = []
+        offset_counts = []
+        for li in range(max_len_start):
+            start_counts.append(Counter())
+            offset_counts.append(Counter())
+            for kmer in get_starts(li + 1):
+                start_counts[li][kmer] = 0
+                offset_counts[li][kmer] = 0
+        handel = open(self.out_file, 'r')
+        line = handel.readline()
+        n_lines = 0
+        while line != '':
+            n_lines += 1
+            for li in range(max_len_start):
+                start_counts[li][line[:li+1]] += 1
+                offset_counts[li][line[:li+1]] += len(line)
+            line = handel.readline()
+        handel.close()
+        
+        self.start_counts = [{'':n_lines}] + start_counts
+        self.offset_nums = [{'':0}]
+        for li in range(max_len_start):
+            kmer_starts = list(offset_counts[li].keys())
+            assert np.all(np.argsort(kmer_starts) == np.arange(4 ** (li+1)))
+            offset_nums = [offset_counts[li][kmer] for kmer in kmer_starts]
+            self.offset_nums.append({kmer : np.sum(offset_nums[:i]) for i, kmer
+                                     in enumerate(kmer_starts)})
+        
+    def get_file_handel(self, kmer_start):
+        len_start = len(kmer_start)
+        file = open(self.out_file, 'r')
+        file.seek(self.offset_nums[len_start][kmer_start])
+        n_lines = self.start_counts[len_start][kmer_start]
+        line_counter = 0
+        while line_counter < n_lines:
+            line_counter += 1
+            yield file.readline()
+        yield ''
 
     def get_size(self):
         # Get total size for next stage.
@@ -361,7 +410,7 @@ class KMC_run:
         return out_size
 
     def get_output_info(self):
-        return self.out_file, int(self.group), self.seq_type, int(self.k)
+        return self.get_file_handel, int(self.group), self.seq_type, int(self.k)
 
 
 def run_kmc(kmc_runs, run_step):
@@ -465,9 +514,9 @@ class Pre_Consolidate:
         self.max_lag = max_lag
         self.queue = []
         for kmc_run in kmc_runs:
-            out_file, group, seq_type, k = kmc_run.get_output_info()
+            get_handel, group, seq_type, k = kmc_run.get_output_info()
             if seq_type == 'pre' and k == self.max_lag:
-                self.load_onto_queue(open(out_file, 'r'), group, 'pre')
+                self.load_onto_queue(get_handel(''), group, 'pre')
 
         # Initialize registers and writers.
         self.n_bins = 2 ** n_bin_bits
@@ -490,7 +539,7 @@ class Pre_Consolidate:
 
     def load_onto_queue(self, file_handle, group, seq_type):
         # Load next kmer and counts onto queue.
-        line = file_handle.readline()
+        line = next(file_handle)
         if line != '':
             line0, line1 = line.split('\t')
             kmer = '[' + line0
@@ -514,24 +563,27 @@ class Pre_Consolidate:
 class Consolidate:
     """Consolidate kmer counting results."""
     def __init__(self, kmc_runs, n_groups, n_bin_bits, lag, max_lag, out_prefix,
-                 kmer_start, pr):
+                 kmer_start, pr, s3_once):
 
         # Initialize queues.
         self.max_lag = max_lag
         self.lag = lag
         self.len_start = len(kmer_start)
         self.kmer_start = kmer_start
+        self.s3_once = s3_once
         # get suffixes for lag and full for max_lag.
         self.queue = []
         self.init_queue = []
         self.no_kmers_seen = True # tracks if the file is empty
         for kmc_run in kmc_runs:
-            out_file, group, seq_type, k = kmc_run.get_output_info()
+            get_handel, group, seq_type, k = kmc_run.get_output_info()
             suf_lags = np.arange(lag, max_lag + 1) if not pr else [lag]
+            if self.s3_once:
+                suf_lags = []
             full_lag = 1 + (max_lag if not pr else lag)
             if ((seq_type == 'suf' and k in suf_lags)
                 or (seq_type == 'full' and k == full_lag)):
-                self.init_queue.append((out_file, group, seq_type))
+                self.init_queue.append((get_handel, group, seq_type))
 
         # Initialize register.
         self.n_bins = 2 ** n_bin_bits
@@ -542,11 +594,11 @@ class Consolidate:
 
     def start(self):
         # Start reading in queue.
-        for out_file, group, seq_type in self.init_queue:
-            self.load_onto_queue(open(out_file, 'r'), group, seq_type)
+        for get_handel, group, seq_type in self.init_queue:
+            self.load_onto_queue(get_handel(self.kmer_start), group, seq_type)
 
         # Open writers.
-        if self.kmer_start == '':
+        if self.kmer_start == '' and not self.s3_once:
             self.writer = [open(elem, 'a') for elem in self.writer_names]
         else:
             self.writer = [open(elem, 'w') for elem in self.writer_names]
@@ -557,8 +609,15 @@ class Consolidate:
         self.start()
 
         # Iterate through queue.
-        while len(self.queue) > 0:
-            heapq.heappop(self.queue)(self, self.writer)
+        if not self.s3_once:
+            while len(self.queue) > 0:
+                heapq.heappop(self.queue)(self, self.writer)
+        else:
+            assert len(self.init_queue) == 1
+            get_handel, group, seq_type = self.init_queue[0]
+            assert group == 0
+            assert seq_type == 'full'
+            self.consolidate_once(get_handel(self.kmer_start))
 
         # Write final kmer counts and close writers.
         if not self.no_kmers_seen:
@@ -566,10 +625,7 @@ class Consolidate:
 
     def load_onto_queue(self, file_handle, group, seq_type):
         # Load next kmer and counts.
-        line = file_handle.readline()
-        # go to first instance of kmer_start, or end of file
-        while line[:self.len_start] != self.kmer_start and line != '':
-            line = file_handle.readline()
+        line = next(file_handle)
         if line != '':
             self.no_kmers_seen = False
             kmer, line1 = line.split('\t')
@@ -579,6 +635,19 @@ class Consolidate:
             count = int(line1[:-1])
             next_unit = Unit3i(kmer, (count, file_handle, group, seq_type))
             heapq.heappush(self.queue, next_unit)
+            
+    def consolidate_once(self, file_handle):
+        # Consolidate in the case of no ends and one group
+        line = 'start'
+        while line != '':
+            # Load next kmer and counts.
+            line = next(file_handle)
+            if line != '':
+                self.no_kmers_seen = False
+                kmer, line1 = line.split('\t')
+                kmer = kmer[:(self.lag+1)]
+                count = int(line1[:-1])
+                self.send_to_registers(kmer, count, 0, writer=self.writer)
 
     def send_to_registers(self, kmer, count, group, writer=None):
         self.register.add_next_kmer_count(kmer, count, group, writer=writer)
@@ -626,16 +695,27 @@ def get_starts(L):
         return [''.join(letters)
                 for letters in itertools.product(*list_)]
 
+
 def stage3(kmc_runs, total_size, n_groups, lag, chunk_size, len_start,
-           out_prefix, pr):
+           out_prefix, pr, s3_once=False):
     """Merge KMC output kmer counts to produce kmer-transition counts for all
     lags."""
+    if s3_once:
+        assert n_groups == 1, "Too many groups"
+
     # Initialize registers and writers.
     n_bin_bits = compute_n_bin_bits(total_size, n_groups, chunk_size, len_start)
+    
+    # Get start indices for KMC runs
+    for kmc_run in kmc_runs:
+        *_, k = kmc_run.get_output_info()
+        len_comp = np.min([len_start, k])
+        kmc_run.count_start_kmers(len_comp)
 
     # Process prefixes.
-    Pre_Consolidate(kmc_runs, n_groups, n_bin_bits, lag,
-                    out_prefix)()
+    if not s3_once:
+        Pre_Consolidate(kmc_runs, n_groups, n_bin_bits, lag,
+                        out_prefix)()
 
     # (Multi)process files.
     # Multiprocess across kmer starts and lags
@@ -644,7 +724,7 @@ def stage3(kmc_runs, total_size, n_groups, lag, chunk_size, len_start,
         len_comp = np.min([len_start, np.max([li-4, 0])])
         for kmer_start in get_starts(len_comp):
             consolidate = Consolidate(kmc_runs, n_groups, n_bin_bits, li+1,
-                                      lag, out_prefix, kmer_start, pr)
+                                      lag, out_prefix, kmer_start, pr, s3_once)
             p = multiprocessing.Process(target=consolidate)
             jobs.append(p)
             p.start()
@@ -693,7 +773,7 @@ def run(args):
     # Postprocess after KMC.
     print('Stage 3...', datetime.datetime.now())
     n_bins = stage3(kmc_runs, total_size, n_groups, args.l, args.mf,
-                    args.ls, args.out_prefix, args.pr)
+                    args.ls, args.out_prefix, args.pr, args.s3_o)
     print('Finished.', datetime.datetime.now())
     return n_bins
 
@@ -748,5 +828,7 @@ if __name__ == '__main__':
                         help='Only run stages 1 and 2.')
     parser.add_argument('-s3', action='store_true', default=False,
                         help='Only run stage 3.')
+    parser.add_argument('-s3_o', action='store_true', default=False,
+                        help='Only run stage 3 without ends for a single group.')
     args = parser.parse_args()
     main(args)

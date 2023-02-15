@@ -40,6 +40,11 @@ def get_output_info(args):
 
 
 def extract_input_counts(args):
+    if args.s3_o is None:
+        compare_kmer = lambda k, b: True
+    else:
+        compare_kmer = lambda k, b: (b != ']' and '[' not in k)
+
     input_info = get_input_info(args)
     groups = [elem[1] for elem in input_info]
     n_groups = max(groups) + 1
@@ -47,7 +52,6 @@ def extract_input_counts(args):
     kmer_counts = [defaultdict(lambda: [[0 for j in range(len(alphabet))]
                                         for i in range(n_groups)])
                    for li in range(args.l)]
-    print(input_info)
     for li in range(args.l):
         lag = li + 1
         for fi in range(len(input_info)):
@@ -59,16 +63,18 @@ def extract_input_counts(args):
                 for j in range(lag, len(full_seq)):
                     lag_kmer = full_seq[(j-lag):j]
                     next_letter = full_seq[j]
-                    kmer_counts[li][lag_kmer][group][
-                            alphabet[next_letter]] += 1
+                    if compare_kmer(lag_kmer, next_letter):
+                        kmer_counts[li][lag_kmer][group][
+                                alphabet[next_letter]] += 1
                 if args.r:
                     seq = Seq.reverse_complement(seq)
                     full_seq = '['*lag + seq + ']'
                     for j in range(lag, len(full_seq)):
                         lag_kmer = full_seq[(j-lag):j]
                         next_letter = full_seq[j]
-                        kmer_counts[li][lag_kmer][group][
-                                alphabet[next_letter]] += 1
+                        if compare_kmer(lag_kmer, next_letter):
+                            kmer_counts[li][lag_kmer][group][
+                                    alphabet[next_letter]] += 1
     return kmer_counts
 
 

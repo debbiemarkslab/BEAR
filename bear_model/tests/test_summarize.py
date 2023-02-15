@@ -13,13 +13,13 @@ from pkg_resources import resource_filename
 exdata_path = resource_filename('bear_model', 'tests/exdata')
 
 
-def setup_args(pr=None):
+def setup_args(pr=None, s3_o=None):
     # --- Run preprocess code. ---
     class Args:
 
         def __init__(self, file, out_prefix, nf=None, l=None, mk=None, mf=None,
                      p=None, r=None, t=None, d1=None, d2=None, n=None, ls=3, pr=pr,
-                     s3=False, s12=False, num=10):
+                     s3=False, s12=False, s3_o=s3_o, num=10):
             self.file = file
             self.out_prefix = out_prefix
             self.nf = nf
@@ -36,11 +36,17 @@ def setup_args(pr=None):
             self.pr = pr
             self.s12 = s12
             self.s3 = s3
+            self.s3_o = s3_o
             self.num = num
 
     max_lag = 10
-    in_file_set = os.path.join(exdata_path, 'infiles.csv')
-    out_prefix = os.path.join(exdata_path, 'out/out')
+    if s3_o is None:
+        in_file_set = os.path.join(exdata_path, 'infiles.csv')
+    else:
+        in_file_set = os.path.join(exdata_path, 'infiles_one_group.csv')
+    out_prefix = os.path.join(exdata_path, 
+                              'out/out' if s3_o is None else 'out/out_one_group')
+    print(out_prefix)
     os.makedirs(os.path.join(exdata_path, 'out'), exist_ok=True)
     os.makedirs(os.path.join(exdata_path, 'tmp'), exist_ok=True)
     args = Args(in_file_set, out_prefix, nf=False, l=max_lag, mk=2,
@@ -48,13 +54,19 @@ def setup_args(pr=None):
     return args, max_lag, in_file_set, out_prefix
 
 
-def main_pr(pr):
+def main_pr(pr, s3_o=None):
     np.random.seed(1)
     # --- Set up input. ---
-    in_file_set = os.path.join(exdata_path, 'infiles.csv')
+    if s3_o is None:
+        in_file_set = os.path.join(exdata_path, 'infiles.csv')
+    else:
+        in_file_set = os.path.join(exdata_path, 'infiles_one_group.csv')
     n_in_files = 5
     n_seqs_per_file = [3, 2, 2, 4, 2]
-    groups = [0, 0, 2, 1, 1]
+    if s3_o is None:
+        groups = [0, 0, 2, 1, 1]
+    else:
+        groups = [0, 0, 0, 0, 0]
     file_types = ['fa', 'fq', 'fq', 'fa', 'fq']
     len_seqs = (14, 18)
     in_file_names = [os.path.join(exdata_path,
@@ -82,8 +94,13 @@ def main_pr(pr):
                                               file_types[fi]))
 
     # --- Run. ---
-    args, max_lag, in_file_set, out_prefix = setup_args(pr)
+    args, max_lag, in_file_set, out_prefix = setup_args(pr, s3_o)
+    print(out_prefix)
     nbins, nbins_rev = summarize.main(args)
+    if not s3_o:
+        compare_kmer = lambda k, b: True
+    else:
+        compare_kmer = lambda k, b: (b != ']' and '[' not in k)
 
     # --- Count kmers in memory. ---
     n_groups = max(groups) + 1
@@ -103,17 +120,19 @@ def main_pr(pr):
                 for j in range(lag, len(full_seq)):
                     lag_kmer = full_seq[(j-lag):j]
                     next_letter = full_seq[j]
-                    kmer_counts[li][lag_kmer][groups[fi]][
-                            alphabet[next_letter]] += 1
-                    kmer_counts_rev[li][lag_kmer][groups[fi]][
-                            alphabet[next_letter]] += 1
+                    if compare_kmer(lag_kmer, next_letter):
+                        kmer_counts[li][lag_kmer][groups[fi]][
+                                alphabet[next_letter]] += 1
+                        kmer_counts_rev[li][lag_kmer][groups[fi]][
+                                alphabet[next_letter]] += 1
                 # Reverse.
                 full_seq = '['*lag + Seq.reverse_complement(seqs[fi][si]) + ']'
                 for j in range(lag, len(full_seq)):
                     lag_kmer = full_seq[(j-lag):j]
                     next_letter = full_seq[j]
-                    kmer_counts_rev[li][lag_kmer][groups[fi]][
-                            alphabet[next_letter]] += 1
+                    if compare_kmer(lag_kmer, next_letter):
+                        kmer_counts_rev[li][lag_kmer][groups[fi]][
+                                alphabet[next_letter]] += 1
 
     # --- Check results. ---
     kmer_counts_check = [dict() for li in range(max_lag)]
@@ -128,7 +147,7 @@ def main_pr(pr):
                 out_reader = csv.reader(out_counts_file, delimiter='\t')
                 for lag_kmer, count_str in out_reader:
                     if lag_kmer in kmer_counts_check[li]:
-                        assert False
+                        assert False, (lag_kmer, li)
                     kmer_counts_check[li][lag_kmer] = json.loads(count_str)
         start_token = '{}_rev_lag_{}_file_'.format(out_prefix, li+1)
         start_token = start_token.split('/')[-1]
@@ -139,7 +158,7 @@ def main_pr(pr):
                 out_reader = csv.reader(out_counts_file, delimiter='\t')
                 for lag_kmer, count_str in out_reader:
                     if lag_kmer in kmer_counts_check_rev[li]:
-                        assert False
+                        assert False, lag_kmer
                     kmer_counts_check_rev[li][lag_kmer] = json.loads(count_str)
 
     # --- Compare. ---
@@ -165,9 +184,12 @@ def main_pr(pr):
                     assert (kmer_counts_rev[li][lag_kmer][gi][j] ==
                             kmer_counts_check_rev[li][lag_kmer][gi][j])
 
+
 def test_small():
     main_pr(True)
     main_pr(False)
+    main_pr(True, True)
+
 
 def test_check():
     # --- Compare using large scale check. ---
@@ -175,4 +197,7 @@ def test_check():
     check_summarize.main(args)
     
     args, *_ = setup_args(pr=True)
+    check_summarize.main(args)
+
+    args, *_ = setup_args(pr=True, s3_o=True)
     check_summarize.main(args)
