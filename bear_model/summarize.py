@@ -608,12 +608,12 @@ class Unit3i:
         consolidate.load_onto_queue(file_handle, group, seq_type)
 
 
-def compute_n_bin_bits(total_size, n_groups, mf):
+def compute_n_bin_bits(total_size, n_groups, mf, len_start):
     """Compute number of output files per lag and bits needed to specify
     them. That is, 2 ** n_bin_bits = n_bins."""
     approx_n_chunks = total_size * n_groups / (mf * 1e9)
     n_chunks_2 = int(max([
-        np.ceil(np.log(approx_n_chunks) / np.log(2)), 0]))
+        np.ceil(np.log(approx_n_chunks) / np.log(2)) - 2 * len_start, 0]))
     return n_chunks_2
 
 
@@ -631,7 +631,7 @@ def stage3(kmc_runs, total_size, n_groups, lag, chunk_size, len_start,
     """Merge KMC output kmer counts to produce kmer-transition counts for all
     lags."""
     # Initialize registers and writers.
-    n_bin_bits = compute_n_bin_bits(total_size, n_groups, chunk_size)
+    n_bin_bits = compute_n_bin_bits(total_size, n_groups, chunk_size, len_start)
 
     # Process prefixes.
     Pre_Consolidate(kmc_runs, n_groups, n_bin_bits, lag,
@@ -654,22 +654,22 @@ def stage3(kmc_runs, total_size, n_groups, lag, chunk_size, len_start,
         job.join()
 
     # Concatenate different starts
-    n_bins = 2 ** n_bin_bits
-    for li in range(lag):
-        len_comp = np.min([len_start, np.max([li-4, 0])])
-        kmers = get_starts(len_comp)
-        if '' not in kmers:
-            kmers += ['']
-        for bi in range(n_bins):
-            fnames = ['{}_lag_{}_file_{}_kmer_start_{}.tsv'.format(
-                      out_prefix, li+1, bi, k) for k in kmers]
-            out_fname = '{}_lag_{}_file_{}.tsv'.format(
-                out_prefix, li+1, bi)
-            command = 'rm ' + out_fname
-            subprocess.run(command, shell=True)
-            command = 'cat {} > {}'.format(
-                ' '.join(fnames), out_fname)
-            subprocess.run(command, shell=True)
+    # n_bins = 2 ** n_bin_bits
+    # for li in range(lag):
+    #     len_comp = np.min([len_start, np.max([li-4, 0])])
+    #     kmers = get_starts(len_comp)
+    #     if '' not in kmers:
+    #         kmers += ['']
+    #     for bi in range(n_bins):
+    #         fnames = ['{}_lag_{}_file_{}_kmer_start_{}.tsv'.format(
+    #                   out_prefix, li+1, bi, k) for k in kmers]
+    #         out_fname = '{}_lag_{}_file_{}.tsv'.format(
+    #             out_prefix, li+1, bi)
+    #         command = 'rm ' + out_fname
+    #         subprocess.run(command, shell=True)
+    #         command = 'cat {} > {}'.format(
+    #             ' '.join(fnames), out_fname)
+    #         subprocess.run(command, shell=True)
 
     return 2 ** n_bin_bits
 

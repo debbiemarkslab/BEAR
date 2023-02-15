@@ -1,5 +1,6 @@
 from bear_model import summarize
 
+import os
 from Bio import Seq
 import argparse
 from collections import defaultdict
@@ -25,11 +26,15 @@ def get_output_info(args):
     total_size = summarize.run_kmc(kmc_runs, not args.s3)
     # Compute number of output files.
     n_bin_bits = summarize.compute_n_bin_bits(
-                    total_size, n_groups, args.mf)
+                    total_size, n_groups, args.mf, args.ls)
     n_bins = 2**n_bin_bits
     # Construct output file names.
-    output_info = [['{}_lag_{}_file_{}.tsv'.format(
-                            args.out_prefix, li+1, bi) for bi in range(n_bins)]
+    path = '/'.join(args.out_prefix.split('/')[:-1])
+    def get_start_token(lag):
+        start_token = '{}_lag_{}_file_'.format(args.out_prefix, lag)
+        return start_token.split('/')[-1]
+    output_info = [[os.path.join(path, file) for file in os.listdir(path)
+                    if file.startswith(get_start_token(li+1))]
                    for li in range(args.l)]
     return output_info
 

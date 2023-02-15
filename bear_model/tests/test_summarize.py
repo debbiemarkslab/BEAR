@@ -119,17 +119,22 @@ def main_pr(pr):
     kmer_counts_check = [dict() for li in range(max_lag)]
     kmer_counts_check_rev = [dict() for li in range(max_lag)]
     for li in range(max_lag):
-        for bi in range(nbins):
-            out_file = '{}_lag_{}_file_{}.tsv'.format(out_prefix, li+1, bi)
+        start_token = '{}_lag_{}_file_'.format(out_prefix, li+1)
+        start_token = start_token.split('/')[-1]
+        path = '/'.join(out_prefix.split('/')[:-1])
+        for out_file in [os.path.join(path, file) for file in os.listdir(path)
+                         if file.startswith(start_token)]:
             with open(out_file, 'r', newline='') as out_counts_file:
                 out_reader = csv.reader(out_counts_file, delimiter='\t')
                 for lag_kmer, count_str in out_reader:
                     if lag_kmer in kmer_counts_check[li]:
                         assert False
                     kmer_counts_check[li][lag_kmer] = json.loads(count_str)
-        for bi in range(nbins_rev):
+        start_token = '{}_rev_lag_{}_file_'.format(out_prefix, li+1)
+        start_token = start_token.split('/')[-1]
+        for out_file in [os.path.join(path, file) for file in os.listdir(path)
+                         if file.startswith(start_token)]:
             # Reverse.
-            out_file = '{}_rev_lag_{}_file_{}.tsv'.format(out_prefix, li+1, bi)
             with open(out_file, 'r', newline='') as out_counts_file:
                 out_reader = csv.reader(out_counts_file, delimiter='\t')
                 for lag_kmer, count_str in out_reader:
