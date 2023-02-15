@@ -401,8 +401,7 @@ class KMC_run:
         line_counter = 0
         while line_counter < n_lines:
             line_counter += 1
-            yield file.readline()
-        yield ''
+            yield next(file)
 
     def get_size(self):
         # Get total size for next stage.
@@ -539,13 +538,15 @@ class Pre_Consolidate:
 
     def load_onto_queue(self, file_handle, group, seq_type):
         # Load next kmer and counts onto queue.
-        line = next(file_handle)
-        if line != '':
+        try:
+            line = next(file_handle)
             line0, line1 = line.split('\t')
             kmer = '[' + line0
             count = int(line1[:-1])
             next_unit = Unit3i(kmer, (count, file_handle, group, None))
             heapq.heappush(self.queue, next_unit)
+        except StopIteration:
+            1
 
     def send_to_registers(self, kmer, count, group, writer=None):
         # Send beginning of kmer to each register.
@@ -625,8 +626,8 @@ class Consolidate:
 
     def load_onto_queue(self, file_handle, group, seq_type):
         # Load next kmer and counts.
-        line = next(file_handle)
-        if line != '':
+        try:
+            line = next(file_handle)
             self.no_kmers_seen = False
             kmer, line1 = line.split('\t')
             if seq_type == 'suf':
@@ -635,19 +636,18 @@ class Consolidate:
             count = int(line1[:-1])
             next_unit = Unit3i(kmer, (count, file_handle, group, seq_type))
             heapq.heappush(self.queue, next_unit)
+        except StopIteration:
+            1
             
     def consolidate_once(self, file_handle):
         # Consolidate in the case of no ends and one group
-        line = 'start'
-        while line != '':
+        for line in file_handle:
             # Load next kmer and counts.
-            line = next(file_handle)
-            if line != '':
-                self.no_kmers_seen = False
-                kmer, line1 = line.split('\t')
-                kmer = kmer[:(self.lag+1)]
-                count = int(line1[:-1])
-                self.send_to_registers(kmer, count, 0, writer=self.writer)
+            self.no_kmers_seen = False
+            kmer, line1 = line.split('\t')
+            kmer = kmer[:(self.lag+1)]
+            count = int(line1[:-1])
+            self.send_to_registers(kmer, count, 0, writer=self.writer)
 
     def send_to_registers(self, kmer, count, group, writer=None):
         self.register.add_next_kmer_count(kmer, count, group, writer=writer)
