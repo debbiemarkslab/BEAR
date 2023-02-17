@@ -818,14 +818,13 @@ def stage3(kmc_runs, total_size, n_groups, lag, chunk_size, len_start,
         for kmer_start in get_starts(len_comp):
             consolidate = Consolidate(kmc_runs, n_groups, n_bin_bits, li+1,
                                       lag, out_prefix, kmer_start, pr, s3_once)
-            consolidate()
-    #         p = multiprocessing.Process(target=consolidate)
-    #         jobs.append(p)
-    #         p.start()
+            p = multiprocessing.Process(target=consolidate)
+            jobs.append(p)
+            p.start()
             
-    # # Wait for all processes to finish
-    # for job in jobs:
-    #     job.join()
+    # Wait for all processes to finish
+    for job in jobs:
+        job.join()
 
     # Concatenate different starts
     # n_bins = 2 ** n_bin_bits
