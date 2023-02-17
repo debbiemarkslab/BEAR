@@ -363,45 +363,137 @@ class KMC_run:
             f.write(stderr_kmc)
             f.write('--- kmc dump ---\n')
             f.write(stderr_kmc_dump)
-            
-    def count_start_kmers(self, max_len_start):
-        start_counts = []
-        offset_counts = []
-        for li in range(max_len_start):
-            start_counts.append(Counter())
-            offset_counts.append(Counter())
-            for kmer in get_starts(li + 1):
-                start_counts[li][kmer] = 0
-                offset_counts[li][kmer] = 0
-        handel = open(self.out_file, 'r')
-        line = handel.readline()
-        n_lines = 0
-        while line != '':
-            n_lines += 1
-            for li in range(max_len_start):
-                start_counts[li][line[:li+1]] += 1
-                offset_counts[li][line[:li+1]] += len(line)
-            line = handel.readline()
-        handel.close()
+
+    def fix_offset(self, offset):
+        # 1. calc the potential offsets
+        max_number_length = 100
+        tab_char_len = 1
+        new_line_char_len = 0
+        max_slide = 4 * (int(self.k) + tab_char_len + max_number_length + new_line_char_len) # M_O
+        max_slide = min(offset,max_slide)
+        current_slide_len = max_slide
+
+        file = open(self.out_file, 'r')
+        file.seek(offset - max_slide)
+
+        # if we are not at the begin of the file
+        if max_slide < offset:
+            # we are throwing out the first line
+            first_line = next(file)
+            first_line_length = len(first_line) + new_line_char_len
+            current_slide_len -= first_line_length # M_1
+
+        # now we will keep reading lines until we hit the offset
+        number_chars_read  = 0
+        lines_seen = []
+        while number_chars_read <  current_slide_len:
+            line = next(file)
+            lines_seen.append(line)
+            number_chars_read += len(line) + new_line_char_len
         
-        self.start_counts = [{'':n_lines}] + start_counts
-        self.offset_nums = [{'':0}]
-        for li in range(max_len_start):
-            kmer_starts = list(offset_counts[li].keys())
-            assert np.all(np.argsort(kmer_starts) == np.arange(4 ** (li+1)))
-            offset_nums = [offset_counts[li][kmer] for kmer in kmer_starts]
-            self.offset_nums.append({kmer : np.sum(offset_nums[:i]) for i, kmer
-                                     in enumerate(kmer_starts)})
+        # now we want to just get 4 lines (max) back
+        if len(lines_seen) > 4:
+            amount_to_remove = sum([ len(i) + new_line_char_len for i in lines_seen[:-4]])
+            current_slide_len -= amount_to_remove 
+            lines_seen = lines_seen[-4:]
+
+        # now we need to get the last kmer in the block of 4 lines
+        last_line = lines_seen[-1]
+        last_kmer = last_line[0:(int(self.k) -1)]
+        for line in lines_seen[:-1]:
+            if line[0:(int(self.k) -1)] != last_kmer:
+                current_slide_len -= len(line) + new_line_char_len
+
+        
+        return offset - current_slide_len
+            
+    def count_start_kmers(self, s3_once, max_len_start):
+        if s3_once:
+            # need to check that this gives you the size in bytes vs lines
+            file_size = self.get_size()
+            
+            #offset are the actual byte offsets
+            offset_counts = [{'':0}]
+            for li in range(max_len_start):
+                offset_counts.append(defaultdict())
+                for j, kmer in enumerate(get_starts(li + 1)):
+                    # approximate to initialize
+                    approximate_offset = int(j * (file_size / 4**(li+1)))
+                    if approximate_offset != 0:
+                        offset_counts[li+1][kmer] = self.fix_offset(approximate_offset)
+                    else:
+                        offset_counts[li+1][kmer] = 0
+
+            
+            # calculate the bytes within each chunk
+            bytes_per_chunk = defaultdict()
+            for li in range(max_len_start):
+                kmers = get_starts(li + 1)
+                for j in range(len(kmers)):
+                    if j + 1 == len(kmers):
+                        offset_1 = file_size
+                        offset_2 = offset_counts[li+1][kmers[j]]
+                    else:
+                        offset_1 = offset_counts[li+1][kmers[j+ 1]]
+                        offset_2 = offset_counts[li+1][kmers[j]]
+                    
+                    bytes = offset_1 - offset_2
+                    bytes_per_chunk[kmers[j]] = bytes
+            
+            bytes_per_chunk[''] = file_size
+            self.offset_nums = offset_counts
+            self.bytes_per_chunk = bytes_per_chunk
+            self.s3_chunk = True
+
+        else:
+            start_counts = []
+            offset_counts = []
+            for li in range(max_len_start):
+                start_counts.append(Counter())
+                offset_counts.append(Counter())
+                for kmer in get_starts(li + 1):
+                    start_counts[li][kmer] = 0
+                    offset_counts[li][kmer] = 0
+            handel = open(self.out_file, 'r')
+            line = handel.readline()
+            n_lines = 0
+            while line != '':
+                n_lines += 1
+                for li in range(max_len_start):
+                    start_counts[li][line[:li+1]] += 1
+                    offset_counts[li][line[:li+1]] += len(line)
+                line = handel.readline()
+            handel.close()
+            
+            self.start_counts = [{'':n_lines}] + start_counts
+            self.offset_nums = [{'':0}]
+            for li in range(max_len_start):
+                kmer_starts = list(offset_counts[li].keys())
+                assert np.all(np.argsort(kmer_starts) == np.arange(4 ** (li+1)))
+                offset_nums = [offset_counts[li][kmer] for kmer in kmer_starts]
+                self.offset_nums.append({kmer : np.sum(offset_nums[:i]) for i, kmer
+                                        in enumerate(kmer_starts)})
+            self.s3_chunk = False
         
     def get_file_handel(self, kmer_start):
         len_start = len(kmer_start)
         file = open(self.out_file, 'r')
         file.seek(self.offset_nums[len_start][kmer_start])
-        n_lines = self.start_counts[len_start][kmer_start]
-        line_counter = 0
-        while line_counter < n_lines:
-            line_counter += 1
-            yield next(file)
+
+        if self.s3_chunk:
+            n_bytes = self.bytes_per_chunk[kmer_start]
+            byte_counter = 0
+            while byte_counter < n_bytes:
+                line = next(file)
+                byte_counter += len(line)
+                yield line
+
+        else:
+            n_lines = self.start_counts[len_start][kmer_start]
+            line_counter = 0
+            while line_counter < n_lines:
+                line_counter += 1
+                yield next(file)
 
     def get_size(self):
         # Get total size for next stage.
@@ -618,6 +710,7 @@ class Consolidate:
             get_handel, group, seq_type = self.init_queue[0]
             assert group == 0
             assert seq_type == 'full'
+            # this is a fh for the start of the full file
             self.consolidate_once(get_handel(self.kmer_start))
 
         # Write final kmer counts and close writers.
@@ -710,7 +803,7 @@ def stage3(kmc_runs, total_size, n_groups, lag, chunk_size, len_start,
     for kmc_run in kmc_runs:
         *_, k = kmc_run.get_output_info()
         len_comp = np.min([len_start, k])
-        kmc_run.count_start_kmers(len_comp)
+        kmc_run.count_start_kmers(s3_once, len_comp)
 
     # Process prefixes.
     if not s3_once:
@@ -725,13 +818,14 @@ def stage3(kmc_runs, total_size, n_groups, lag, chunk_size, len_start,
         for kmer_start in get_starts(len_comp):
             consolidate = Consolidate(kmc_runs, n_groups, n_bin_bits, li+1,
                                       lag, out_prefix, kmer_start, pr, s3_once)
-            p = multiprocessing.Process(target=consolidate)
-            jobs.append(p)
-            p.start()
+            consolidate()
+    #         p = multiprocessing.Process(target=consolidate)
+    #         jobs.append(p)
+    #         p.start()
             
-    # Wait for all processes to finish
-    for job in jobs:
-        job.join()
+    # # Wait for all processes to finish
+    # for job in jobs:
+    #     job.join()
 
     # Concatenate different starts
     # n_bins = 2 ** n_bin_bits
