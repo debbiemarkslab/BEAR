@@ -253,6 +253,8 @@ def preprocess_seq_files(seq_list_file, lag, reverse, pr, out_prefix,
     # first column is paths to the files, second is their "group" and
     # third is their type 'fa' or 'fq'.
     files_list = np.genfromtxt(seq_list_file, delimiter=',', dtype=str)
+    if len(files_list.shape) == 1:
+        files_list = files_list[None,:]
     file_num = len(files_list)
     n_groups = int(np.max(files_list[:, 1].astype(int)) + 1)
     all_kmc_input_file_id_keys = []
